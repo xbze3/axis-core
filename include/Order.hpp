@@ -18,7 +18,7 @@ public:
 
     Order(int id, OrderSide side, OrderType type, double price, int quantity, std::uint64_t sequenceNumber);
 
-    void printOrder() const;
+    void PrintOrder() const;
 };
 
 #endif

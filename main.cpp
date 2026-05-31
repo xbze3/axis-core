@@ -1,25 +1,15 @@
-#include "include/Order.hpp"
+#include "OrderBook.hpp"
 
 int main()
 {
-    Order order1(
-        1,
-        OrderSide::Buy,
-        OrderType::Limit,
-        100.50,
-        10,
-        1);
+    OrderBook book;
 
-    Order order2(
-        2,
-        OrderSide::Sell,
-        OrderType::Market,
-        101.25,
-        5,
-        2);
+    book.AddOrder(OrderSide::Buy, OrderType::Limit, 100.50, 10);
+    book.AddOrder(OrderSide::Buy, OrderType::Limit, 99.75, 5);
+    book.AddOrder(OrderSide::Sell, OrderType::Limit, 101.25, 7);
+    book.AddOrder(OrderSide::Buy, OrderType::Limit, 105.25, 10);
 
-    order1.printOrder();
-    order2.printOrder();
+    book.PrintOrderBook();
 
     return 0;
 }

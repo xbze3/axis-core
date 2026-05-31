@@ -15,7 +15,7 @@ Order::Order(int id, OrderSide side, OrderType type, double price, int quantity,
     this->createdAt = std::chrono::system_clock::now();
 }
 
-void Order::printOrder() const
+void Order::PrintOrder() const
 {
     // Print Order ID
 
