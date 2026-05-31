@@ -1,5 +1,6 @@
 #include <iostream>
 #include <iomanip>
+#include <algorithm>
 
 #include "OrderBook.hpp"
 
@@ -23,94 +24,170 @@ void OrderBook::AddOrder(OrderSide side, OrderType type, double price, int quant
         return;
     }
 
-    if (type == OrderType::Market)
-    {
-        std::cout << "WARNING: Market orders are not supported yet" << std::endl;
-        return;
-    }
-
     Order NewOrder(NextOrderID, side, type, price, quantity, NextSequenceNumber);
 
-    if (side == OrderSide::Buy)
+    if (type == OrderType::Market)
     {
-        while (NewOrder.quantity > 0 && !SellOrders.empty())
+        if (side == OrderSide::Buy)
         {
-            auto BestSell = SellOrders.begin();
-            double BestSellPrice = BestSell->first;
-
-            if (NewOrder.price < BestSellPrice)
+            while (NewOrder.quantity > 0 && !SellOrders.empty())
             {
-                break;
-            }
+                auto BestSell = SellOrders.begin();
+                double BestSellPrice = BestSell->first;
 
-            std::deque<Order> &OrdersAtBestSellPrice = BestSell->second;
+                std::deque<Order> &OrdersAtBestSellPrice = BestSell->second;
 
-            while (NewOrder.quantity > 0 && !OrdersAtBestSellPrice.empty())
-            {
-                Order &BestSellOrder = OrdersAtBestSellPrice.front();
-
-                int TradeQuantity = std::min(NewOrder.quantity, BestSellOrder.quantity);
-
-                NewOrder.quantity -= TradeQuantity;
-                BestSellOrder.quantity -= TradeQuantity;
-
-                std::cout << "TRADE: Buy Order " << NewOrder.id << " matched with Sell Order " << BestSellOrder.id << " | Price: " << BestSellPrice << " | Quantity: " << TradeQuantity << std::endl;
-
-                if (BestSellOrder.quantity == 0)
+                while (NewOrder.quantity > 0 && !OrdersAtBestSellPrice.empty())
                 {
-                    OrdersAtBestSellPrice.pop_front();
+                    Order &BestSellOrder = OrdersAtBestSellPrice.front();
+
+                    int TradeQuantity = std::min(NewOrder.quantity, BestSellOrder.quantity);
+
+                    NewOrder.quantity -= TradeQuantity;
+                    BestSellOrder.quantity -= TradeQuantity;
+
+                    std::cout << "TRADE: Buy Order " << NewOrder.id << " matched with Sell Order " << BestSellOrder.id << " | Price: " << BestSellPrice << " | Quantity: " << TradeQuantity << " | Order Type: Market" << std::endl;
+
+                    if (BestSellOrder.quantity == 0)
+                    {
+                        OrdersAtBestSellPrice.pop_front();
+                    }
+                }
+
+                if (OrdersAtBestSellPrice.empty())
+                {
+                    SellOrders.erase(BestSell);
                 }
             }
-            if (OrdersAtBestSellPrice.empty())
+
+            if (NewOrder.quantity > 0)
             {
-                SellOrders.erase(BestSell);
+                std::cout << "MARKET BUY ORDER " << NewOrder.id << " partially filled. Unfilled quantity cancelled: " << NewOrder.quantity << std::endl;
             }
         }
-
-        if (NewOrder.quantity > 0)
+        else
         {
-            BuyOrders[price].push_back(NewOrder);
+            while (NewOrder.quantity > 0 && !BuyOrders.empty())
+            {
+                auto BestBuy = BuyOrders.begin();
+                double BestBuyPrice = BestBuy->first;
+
+                std::deque<Order> &OrdersAtBestBuyPrice = BestBuy->second;
+
+                while (NewOrder.quantity > 0 && !OrdersAtBestBuyPrice.empty())
+                {
+                    Order &BestBuyOrder = OrdersAtBestBuyPrice.front();
+
+                    int TradeQuantity = std::min(NewOrder.quantity, BestBuyOrder.quantity);
+
+                    NewOrder.quantity -= TradeQuantity;
+                    BestBuyOrder.quantity -= TradeQuantity;
+
+                    std::cout << "TRADE: Sell Order " << NewOrder.id << " matched with Buy Order " << BestBuyOrder.id << " | Price: " << BestBuyPrice << " | Quantity: " << TradeQuantity << " | Order Type: Market" << std::endl;
+
+                    if (BestBuyOrder.quantity == 0)
+                    {
+                        OrdersAtBestBuyPrice.pop_front();
+                    }
+                }
+
+                if (OrdersAtBestBuyPrice.empty())
+                {
+                    BuyOrders.erase(BestBuy);
+                }
+            }
+
+            if (NewOrder.quantity > 0)
+            {
+                std::cout << "MARKET SELL ORDER " << NewOrder.id << " partially filled. Unfilled quantity cancelled: " << NewOrder.quantity << std::endl;
+            }
         }
     }
     else
     {
-        while (NewOrder.quantity > 0 && !BuyOrders.empty())
+        if (side == OrderSide::Buy)
         {
-            auto BestBuy = BuyOrders.begin();
-            double BestBuyPrice = BestBuy->first;
-
-            if (NewOrder.price > BestBuyPrice)
+            while (NewOrder.quantity > 0 && !SellOrders.empty())
             {
-                break;
-            }
+                auto BestSell = SellOrders.begin();
+                double BestSellPrice = BestSell->first;
 
-            std::deque<Order> &OrdersAtBestBuyPrice = BestBuy->second;
-
-            while (NewOrder.quantity > 0 && !OrdersAtBestBuyPrice.empty())
-            {
-                Order &BestBuyOrder = OrdersAtBestBuyPrice.front();
-
-                int TradeQuantity = std::min(NewOrder.quantity, BestBuyOrder.quantity);
-
-                NewOrder.quantity -= TradeQuantity;
-                BestBuyOrder.quantity -= TradeQuantity;
-
-                std::cout << "TRADE: Sell Order " << NewOrder.id << " matched with Buy Order " << BestBuyOrder.id << " | Price: " << BestBuyPrice << " | Quantity: " << TradeQuantity << std::endl;
-
-                if (BestBuyOrder.quantity == 0)
+                if (NewOrder.price < BestSellPrice)
                 {
-                    OrdersAtBestBuyPrice.pop_front();
+                    break;
+                }
+
+                std::deque<Order> &OrdersAtBestSellPrice = BestSell->second;
+
+                while (NewOrder.quantity > 0 && !OrdersAtBestSellPrice.empty())
+                {
+                    Order &BestSellOrder = OrdersAtBestSellPrice.front();
+
+                    int TradeQuantity = std::min(NewOrder.quantity, BestSellOrder.quantity);
+
+                    NewOrder.quantity -= TradeQuantity;
+                    BestSellOrder.quantity -= TradeQuantity;
+
+                    std::cout << "TRADE: Buy Order " << NewOrder.id << " matched with Sell Order " << BestSellOrder.id << " | Price: " << BestSellPrice << " | Quantity: " << TradeQuantity << " | Order Type: Limit" << std::endl;
+
+                    if (BestSellOrder.quantity == 0)
+                    {
+                        OrdersAtBestSellPrice.pop_front();
+                    }
+                }
+
+                if (OrdersAtBestSellPrice.empty())
+                {
+                    SellOrders.erase(BestSell);
                 }
             }
-            if (OrdersAtBestBuyPrice.empty())
+
+            if (NewOrder.quantity > 0)
             {
-                BuyOrders.erase(BestBuy);
+                BuyOrders[price].push_back(NewOrder);
             }
         }
-
-        if (NewOrder.quantity > 0)
+        else
         {
-            SellOrders[price].push_back(NewOrder);
+            while (NewOrder.quantity > 0 && !BuyOrders.empty())
+            {
+                auto BestBuy = BuyOrders.begin();
+                double BestBuyPrice = BestBuy->first;
+
+                if (NewOrder.price > BestBuyPrice)
+                {
+                    break;
+                }
+
+                std::deque<Order> &OrdersAtBestBuyPrice = BestBuy->second;
+
+                while (NewOrder.quantity > 0 && !OrdersAtBestBuyPrice.empty())
+                {
+                    Order &BestBuyOrder = OrdersAtBestBuyPrice.front();
+
+                    int TradeQuantity = std::min(NewOrder.quantity, BestBuyOrder.quantity);
+
+                    NewOrder.quantity -= TradeQuantity;
+                    BestBuyOrder.quantity -= TradeQuantity;
+
+                    std::cout << "TRADE: Sell Order " << NewOrder.id << " matched with Buy Order " << BestBuyOrder.id << " | Price: " << BestBuyPrice << " | Quantity: " << TradeQuantity << " | Order Type: Limit" << std::endl;
+
+                    if (BestBuyOrder.quantity == 0)
+                    {
+                        OrdersAtBestBuyPrice.pop_front();
+                    }
+                }
+
+                if (OrdersAtBestBuyPrice.empty())
+                {
+                    BuyOrders.erase(BestBuy);
+                }
+            }
+
+            if (NewOrder.quantity > 0)
+            {
+                SellOrders[price].push_back(NewOrder);
+            }
         }
     }
 
