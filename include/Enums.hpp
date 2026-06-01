@@ -13,4 +13,10 @@ enum class OrderType
     Limit
 };
 
+enum class AggressorSide
+{
+    Buy,
+    Sell
+};
+
 #endif
