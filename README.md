@@ -20,6 +20,10 @@ The order book supports:
 - Best bid and best ask display
 - Spread calculation
 - Formatted terminal output
+- Executed trade recording
+- Shared trade history
+- Individual trade printing
+- Trade history display
 - Basic validation for invalid price and quantity values
 
 ## Why This Project
@@ -68,6 +72,35 @@ A sell limit order can match with buy orders at or above its limit price.
 
 Market orders immediately consume available liquidity from the opposite side of the book. Any remaining unfilled quantity is cancelled.
 
+### Trade
+
+A trade represents one completed match between a buy order and a sell order.
+
+Each trade stores information such as:
+
+- Trade ID
+- Buy order ID
+- Sell order ID
+- Execution price
+- Executed quantity
+- Aggressor side
+- Execution timestamp
+
+A single incoming order can create multiple trades if it matches against several resting orders across one or more price levels.
+
+### Trade History
+
+The trade history stores all executed trades in one shared location.
+
+The `OrderBook` records trades into a shared `TradeHistory` object whenever a match occurs. This allows executed trades to be displayed separately from the current resting order book.
+
+This separation keeps the design clear:
+
+- `Order` represents a request to buy or sell.
+- `OrderBook` stores active resting orders and performs matching.
+- `Trade` represents one executed match.
+- `TradeHistory` stores and displays all executed trades.
+
 ## Data Structures Used
 
 The project uses `std::map` and `std::deque` to model the order book.
@@ -93,6 +126,18 @@ This stores sell orders grouped by price, with the lowest price first.
 Each price level may contain multiple orders. A `std::deque` is used to preserve FIFO ordering at the same price level.
 
 That means older orders at the same price are matched before newer orders.
+
+### Trade History
+
+Executed trades are stored in a vector:
+
+```cpp
+std::vector<Trade> trades;
+```
+
+A vector works well for trade history because trades are recorded as a growing list. Each new trade is appended to the end of the history.
+
+The `TradeHistory` component manages trade IDs, creates new trade records, stores them, and prints the full trade history.
 
 ## Matching Behavior
 
@@ -177,14 +222,18 @@ cpp-orderbook-engine/
 ├── include/
 │   ├── Enums.hpp
 │   ├── Order.hpp
-│   └── OrderBook.hpp
+│   ├── OrderBook.hpp
+│   ├── Trade.hpp
+│   └── TradeHistory.hpp
 │
 ├── src/
 │   ├── Order.cpp
-│   └── OrderBook.cpp
+│   ├── OrderBook.cpp
+│   ├── Trade.cpp
+│   └── TradeHistory.cpp
 │
 ├── tests/
-│   └── TestOrderBook.cpp
+│   └── TestLogic.cpp
 │
 ├── .gitignore
 ├── main.cpp
@@ -196,7 +245,7 @@ cpp-orderbook-engine/
 From the project root, compile with:
 
 ```bash
-g++ main.cpp src/Order.cpp src/OrderBook.cpp -I include -o main
+g++ main.cpp src/Order.cpp src/OrderBook.cpp src/Trade.cpp src/TradeHistory.cpp -I include -o main
 ```
 
 Run with:
@@ -213,22 +262,22 @@ On Windows PowerShell:
 
 ## Running the Test File
 
-If using `testOrderBook.cpp`, compile with:
+If using `tests/TestLogic.cpp`, compile with:
 
 ```bash
-g++ tests/testOrderBook.cpp src/Order.cpp src/OrderBook.cpp -I include -o testOrderBook
+g++ tests/TestLogic.cpp src/Order.cpp src/OrderBook.cpp src/Trade.cpp src/TradeHistory.cpp -I include -o TestLogic
 ```
 
 Run with:
 
 ```bash
-./testOrderBook
+./TestLogic
 ```
 
 On Windows PowerShell:
 
 ```powershell
-.\testOrderBook.exe
+.\TestLogic.exe
 ```
 
 ## Current Features
@@ -243,18 +292,19 @@ On Windows PowerShell:
 - Remaining market order quantity is cancelled
 - Formatted terminal order book display
 - Best bid, best ask, and spread display
+- Trade recording through a shared `TradeHistory` object
+- Trade records with buy order ID, sell order ID, price, quantity, aggressor side, and timestamp
+- Individual trade printing
+- Full trade history printing
 
 ## Future Improvements
 
 Possible next steps:
 
-- Add a `Trade` class to store executed trades
-- Store trade history
 - Add order cancellation by order ID
 - Add order lookup using a hash map
 - Add unit tests
 - Add support for modifying orders
-- Add timestamps to trade executions
 - Add CSV export for order and trade history
 - Add a command-line interface
 - Add performance benchmarks
@@ -275,6 +325,9 @@ This project helped me practice:
 - Price-time priority
 - Matching engine logic
 - Partial fills
+- Trade history design
+- Shared object references
+- Constructor initializer lists
 - Terminal formatting
 - Multi-file C++ project structure
 

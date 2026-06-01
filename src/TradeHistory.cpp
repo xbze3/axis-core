@@ -16,3 +16,27 @@ void TradeHistory::AddTrade(int buyOrderId, int sellOrderId, double price, int q
 
     nextTradeId++;
 }
+
+void TradeHistory::PrintTradeHistory() const
+{
+    std::cout << "\n";
+    std::cout << "====================== TRADE HISTORY ======================" << std::endl;
+
+    if (trades.empty())
+    {
+        std::cout << "No trades executed yet." << std::endl;
+    }
+    else
+    {
+        std::cout << "Total Trades Executed: " << trades.size() << std::endl;
+        std::cout << "-----------------------------------------------------------" << std::endl;
+
+        for (const Trade &trade : trades)
+        {
+            trade.PrintTrade();
+        }
+    }
+
+    std::cout << "===========================================================" << std::endl;
+    std::cout << "\n";
+}

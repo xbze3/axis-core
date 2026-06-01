@@ -4,7 +4,7 @@
 
 #include "OrderBook.hpp"
 
-OrderBook::OrderBook()
+OrderBook::OrderBook(TradeHistory &tradeHistory) : tradeHistory(tradeHistory)
 {
     NextOrderID = 1;
     NextSequenceNumber = 1;
@@ -46,6 +46,7 @@ void OrderBook::AddOrder(OrderSide side, OrderType type, double price, int quant
                     NewOrder.quantity -= TradeQuantity;
                     BestSellOrder.quantity -= TradeQuantity;
 
+                    tradeHistory.AddTrade(NewOrder.id, BestSellOrder.id, BestSellPrice, TradeQuantity, AggressorSide::Buy);
                     std::cout << "TRADE: Buy Order " << NewOrder.id << " matched with Sell Order " << BestSellOrder.id << " | Price: " << BestSellPrice << " | Quantity: " << TradeQuantity << " | Order Type: Market" << std::endl;
 
                     if (BestSellOrder.quantity == 0)
@@ -83,6 +84,7 @@ void OrderBook::AddOrder(OrderSide side, OrderType type, double price, int quant
                     NewOrder.quantity -= TradeQuantity;
                     BestBuyOrder.quantity -= TradeQuantity;
 
+                    tradeHistory.AddTrade(BestBuyOrder.id, NewOrder.id, BestBuyPrice, TradeQuantity, AggressorSide::Sell);
                     std::cout << "TRADE: Sell Order " << NewOrder.id << " matched with Buy Order " << BestBuyOrder.id << " | Price: " << BestBuyPrice << " | Quantity: " << TradeQuantity << " | Order Type: Market" << std::endl;
 
                     if (BestBuyOrder.quantity == 0)
@@ -128,6 +130,7 @@ void OrderBook::AddOrder(OrderSide side, OrderType type, double price, int quant
                     NewOrder.quantity -= TradeQuantity;
                     BestSellOrder.quantity -= TradeQuantity;
 
+                    tradeHistory.AddTrade(NewOrder.id, BestSellOrder.id, BestSellPrice, TradeQuantity, AggressorSide::Buy);
                     std::cout << "TRADE: Buy Order " << NewOrder.id << " matched with Sell Order " << BestSellOrder.id << " | Price: " << BestSellPrice << " | Quantity: " << TradeQuantity << " | Order Type: Limit" << std::endl;
 
                     if (BestSellOrder.quantity == 0)
@@ -170,6 +173,7 @@ void OrderBook::AddOrder(OrderSide side, OrderType type, double price, int quant
                     NewOrder.quantity -= TradeQuantity;
                     BestBuyOrder.quantity -= TradeQuantity;
 
+                    tradeHistory.AddTrade(BestBuyOrder.id, NewOrder.id, BestBuyPrice, TradeQuantity, AggressorSide::Sell);
                     std::cout << "TRADE: Sell Order " << NewOrder.id << " matched with Buy Order " << BestBuyOrder.id << " | Price: " << BestBuyPrice << " | Quantity: " << TradeQuantity << " | Order Type: Limit" << std::endl;
 
                     if (BestBuyOrder.quantity == 0)

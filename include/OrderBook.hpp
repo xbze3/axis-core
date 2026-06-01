@@ -7,6 +7,7 @@
 #include <functional>
 
 #include "Order.hpp"
+#include "TradeHistory.hpp"
 
 class OrderBook
 {
@@ -16,8 +17,10 @@ class OrderBook
     std::map<double, std::deque<Order>, std::greater<double>> BuyOrders;
     std::map<double, std::deque<Order>> SellOrders;
 
+    TradeHistory &tradeHistory;
+
 public:
-    OrderBook();
+    OrderBook(TradeHistory &tradeHistory);
 
     void AddOrder(OrderSide side, OrderType type, double price, int quantity);
 
