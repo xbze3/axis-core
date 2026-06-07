@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <string>
 #include <cstdint>
+#include <limits>
 
 #include "OrderBook.hpp"
 #include "TradeHistory.hpp"
@@ -20,8 +21,28 @@ void ClearScreen()
 void Pause()
 {
     std::cout << "\nPress Enter to continue...";
-    std::cin.ignore();
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     std::cin.get();
+}
+
+int ReadInt(const std::string &prompt)
+{
+    int value;
+
+    while (true)
+    {
+        std::cout << prompt;
+
+        if (std::cin >> value)
+        {
+            return value;
+        }
+
+        std::cout << "Invalid input. Please enter a number.\n";
+
+        std::cin.clear();
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    }
 }
 
 std::uint64_t ParsePriceToTicks(const std::string &priceInput)
@@ -94,23 +115,19 @@ int main()
         std::cout << "3. View Trade History\n";
         std::cout << "4. Exit\n";
         std::cout << "======================================================\n";
-        std::cout << "Select an option: ";
 
-        int menuChoice;
-        std::cin >> menuChoice;
+        int menuChoice = ReadInt("Select an option: ");
 
         if (menuChoice == 1)
         {
-            int sideChoice;
-            int typeChoice;
             int quantity;
             std::uint64_t priceTicks = 0;
 
             std::cout << "\nSelect Order Side:\n";
             std::cout << "1. Buy\n";
             std::cout << "2. Sell\n";
-            std::cout << "Choice: ";
-            std::cin >> sideChoice;
+
+            int sideChoice = ReadInt("Choice: ");
 
             OrderSide side;
 
@@ -133,8 +150,8 @@ int main()
             std::cout << "\nSelect Order Type:\n";
             std::cout << "1. Limit\n";
             std::cout << "2. Market\n";
-            std::cout << "Choice: ";
-            std::cin >> typeChoice;
+
+            int typeChoice = ReadInt("Choice: ");
 
             OrderType type;
 
@@ -154,8 +171,7 @@ int main()
                 continue;
             }
 
-            std::cout << "\nEnter Quantity: ";
-            std::cin >> quantity;
+            quantity = ReadInt("\nEnter Quantity: ");
 
             if (type == OrderType::Limit)
             {
