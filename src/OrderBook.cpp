@@ -10,7 +10,7 @@ OrderBook::OrderBook(TradeHistory &tradeHistory) : tradeHistory(tradeHistory)
     NextSequenceNumber = 1;
 };
 
-void OrderBook::AddOrder(OrderSide side, OrderType type, double price, int quantity)
+void OrderBook::AddOrder(OrderSide side, OrderType type, std::uint64_t priceTicks, int quantity)
 {
     if (quantity <= 0)
     {
@@ -18,13 +18,13 @@ void OrderBook::AddOrder(OrderSide side, OrderType type, double price, int quant
         return;
     }
 
-    if (type == OrderType::Limit && price <= 0)
+    if (type == OrderType::Limit && priceTicks <= 0)
     {
         std::cout << "ERROR: Valid Order price is required for a Limit Order" << std::endl;
         return;
     }
 
-    Order NewOrder(NextOrderID, side, type, price, quantity, NextSequenceNumber);
+    Order NewOrder(NextOrderID, side, type, priceTicks, quantity, NextSequenceNumber);
 
     if (type == OrderType::Market)
     {
@@ -114,7 +114,7 @@ void OrderBook::AddOrder(OrderSide side, OrderType type, double price, int quant
                 auto BestSell = SellOrders.begin();
                 double BestSellPrice = BestSell->first;
 
-                if (NewOrder.price < BestSellPrice)
+                if (NewOrder.priceTicks < BestSellPrice)
                 {
                     break;
                 }
@@ -147,7 +147,7 @@ void OrderBook::AddOrder(OrderSide side, OrderType type, double price, int quant
 
             if (NewOrder.quantity > 0)
             {
-                BuyOrders[price].push_back(NewOrder);
+                BuyOrders[priceTicks].push_back(NewOrder);
             }
         }
         else
@@ -157,7 +157,7 @@ void OrderBook::AddOrder(OrderSide side, OrderType type, double price, int quant
                 auto BestBuy = BuyOrders.begin();
                 double BestBuyPrice = BestBuy->first;
 
-                if (NewOrder.price > BestBuyPrice)
+                if (NewOrder.priceTicks > BestBuyPrice)
                 {
                     break;
                 }
@@ -190,7 +190,7 @@ void OrderBook::AddOrder(OrderSide side, OrderType type, double price, int quant
 
             if (NewOrder.quantity > 0)
             {
-                SellOrders[price].push_back(NewOrder);
+                SellOrders[priceTicks].push_back(NewOrder);
             }
         }
     }
@@ -250,7 +250,7 @@ void OrderBook::PrintOrderBook() const
     {
         for (const auto &priceLevel : SellOrders)
         {
-            double price = priceLevel.first;
+            std::uint64_t price = priceLevel.first;
             const std::deque<Order> &orders = priceLevel.second;
 
             int levelQuantity = 0;
@@ -320,7 +320,7 @@ void OrderBook::PrintOrderBook() const
     {
         for (const auto &priceLevel : BuyOrders)
         {
-            double price = priceLevel.first;
+            std::uint64_t price = priceLevel.first;
             const std::deque<Order> &orders = priceLevel.second;
 
             int levelQuantity = 0;

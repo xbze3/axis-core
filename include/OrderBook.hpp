@@ -22,7 +22,7 @@ class OrderBook
 public:
     OrderBook(TradeHistory &tradeHistory);
 
-    void AddOrder(OrderSide side, OrderType type, double price, int quantity);
+    void AddOrder(OrderSide side, OrderType type, std::uint64_t priceTicks, int quantity);
 
     void PrintOrderBook() const;
 };

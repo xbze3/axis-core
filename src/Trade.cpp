@@ -4,12 +4,12 @@
 
 #include "Trade.hpp"
 
-Trade::Trade(int id, int buyOrderId, int sellOrderId, double price, int quantity, AggressorSide aggressorSide)
+Trade::Trade(int id, int buyOrderId, int sellOrderId, std::uint64_t priceTicks, int quantity, AggressorSide aggressorSide)
 {
     this->id = id;
     this->buyOrderId = buyOrderId;
     this->sellOrderId = sellOrderId;
-    this->price = price;
+    this->priceTicks = priceTicks;
     this->quantity = quantity;
     this->aggressorSide = aggressorSide;
     this->timestamp = std::chrono::system_clock::now();
@@ -21,7 +21,7 @@ void Trade::PrintTrade() const
 
     std::cout << "Buy Order ID: " << buyOrderId << std::endl;
     std::cout << "Sell Order ID: " << sellOrderId << std::endl;
-    std::cout << "Trade Price: " << price << std::endl;
+    std::cout << "Trade Price: " << priceTicks << std::endl;
     std::cout << "Trade Quantity: " << quantity << std::endl;
 
     std::cout << "Aggressor Side: ";

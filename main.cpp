@@ -45,7 +45,7 @@ int main()
             int sideChoice;
             int typeChoice;
             int quantity;
-            double price = 0.0;
+            std::uint64_t priceTicks = 0;
 
             std::cout << "\nSelect Order Side:\n";
             std::cout << "1. Buy\n";
@@ -101,7 +101,7 @@ int main()
             if (type == OrderType::Limit)
             {
                 std::cout << "Enter Limit Price: ";
-                std::cin >> price;
+                std::cin >> priceTicks;
             }
 
             ClearScreen();
@@ -113,12 +113,12 @@ int main()
 
             if (type == OrderType::Limit)
             {
-                std::cout << "Price: " << price << std::endl;
+                std::cout << "Price: " << priceTicks << std::endl;
             }
 
             std::cout << "=================================================\n\n";
 
-            book.AddOrder(side, type, price, quantity);
+            book.AddOrder(side, type, priceTicks, quantity);
 
             book.PrintOrderBook();
             history.PrintTradeHistory();

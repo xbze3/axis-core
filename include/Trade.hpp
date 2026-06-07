@@ -11,12 +11,12 @@ public:
     int id;
     int buyOrderId;
     int sellOrderId;
-    double price;
+    std::uint64_t priceTicks;
     int quantity;
     AggressorSide aggressorSide;
     std::chrono::system_clock::time_point timestamp;
 
-    Trade(int id, int buyOrderId, int sellOrderId, double price, int quantity, AggressorSide aggressorSide);
+    Trade(int id, int buyOrderId, int sellOrderId, std::uint64_t priceTicks, int quantity, AggressorSide aggressorSide);
 
     void PrintTrade() const;
 };

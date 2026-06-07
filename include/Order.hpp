@@ -11,12 +11,12 @@ public:
     int id;
     OrderSide side;
     OrderType type;
-    double price;
+    std::uint64_t priceTicks;
     int quantity;
     std::uint64_t sequenceNumber;
     std::chrono::system_clock::time_point createdAt;
 
-    Order(int id, OrderSide side, OrderType type, double price, int quantity, std::uint64_t sequenceNumber);
+    Order(int id, OrderSide side, OrderType type, std::uint64_t priceTicks, int quantity, std::uint64_t sequenceNumber);
 
     void PrintOrder() const;
 };

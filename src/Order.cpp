@@ -4,12 +4,12 @@
 #include <chrono>
 #include "Order.hpp"
 
-Order::Order(int id, OrderSide side, OrderType type, double price, int quantity, std::uint64_t sequenceNumber)
+Order::Order(int id, OrderSide side, OrderType type, std::uint64_t priceTicks, int quantity, std::uint64_t sequenceNumber)
 {
     this->id = id;
     this->side = side;
     this->type = type;
-    this->price = price;
+    this->priceTicks = priceTicks;
     this->quantity = quantity;
     this->sequenceNumber = sequenceNumber;
     this->createdAt = std::chrono::system_clock::now();
@@ -49,7 +49,7 @@ void Order::PrintOrder() const
 
     // Print Order Price
 
-    std::cout << "Order Price: " << price << std::endl;
+    std::cout << "Order Price: $" << (priceTicks / 100) << std::endl;
 
     // Print Order Quantity
 
