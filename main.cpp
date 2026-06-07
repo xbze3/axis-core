@@ -8,6 +8,7 @@
 
 #include "OrderBook.hpp"
 #include "TradeHistory.hpp"
+#include "Utils.hpp"
 
 void ClearScreen()
 {
@@ -85,19 +86,6 @@ std::uint64_t ParsePriceToTicks(const std::string &priceInput)
     std::uint64_t cents = std::stoull(centsPart);
 
     return (dollars * 100) + cents;
-}
-
-std::string FormatPrice(std::uint64_t priceTicks)
-{
-    std::uint64_t dollars = priceTicks / 100;
-    std::uint64_t cents = priceTicks % 100;
-
-    std::ostringstream output;
-
-    output << "$" << dollars << "."
-           << std::setw(2) << std::setfill('0') << cents;
-
-    return output.str();
 }
 
 int main()

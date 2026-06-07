@@ -1,7 +1,9 @@
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
+#include <sstream>
 
+#include "Utils.hpp"
 #include "OrderBook.hpp"
 
 OrderBook::OrderBook(TradeHistory &tradeHistory) : tradeHistory(tradeHistory)
@@ -29,7 +31,7 @@ void OrderBook::HandleMarketBuy(Order &NewOrder)
             BestSellOrder.quantity -= TradeQuantity;
 
             tradeHistory.AddTrade(NewOrder.id, BestSellOrder.id, BestSellPrice, TradeQuantity, AggressorSide::Buy);
-            std::cout << "TRADE: Buy Order " << NewOrder.id << " matched with Sell Order " << BestSellOrder.id << " | Price: " << BestSellPrice << " | Quantity: " << TradeQuantity << " | Order Type: Market" << std::endl;
+            std::cout << "TRADE: Buy Order " << NewOrder.id << " matched with Sell Order " << BestSellOrder.id << " | Price: " << FormatPrice(BestSellPrice) << " | Quantity: " << TradeQuantity << " | Order Type: Market" << std::endl;
 
             if (BestSellOrder.quantity == 0)
             {
@@ -68,7 +70,7 @@ void OrderBook::HandleMarketSell(Order &NewOrder)
             BestBuyOrder.quantity -= TradeQuantity;
 
             tradeHistory.AddTrade(BestBuyOrder.id, NewOrder.id, BestBuyPrice, TradeQuantity, AggressorSide::Sell);
-            std::cout << "TRADE: Sell Order " << NewOrder.id << " matched with Buy Order " << BestBuyOrder.id << " | Price: " << BestBuyPrice << " | Quantity: " << TradeQuantity << " | Order Type: Market" << std::endl;
+            std::cout << "TRADE: Sell Order " << NewOrder.id << " matched with Buy Order " << BestBuyOrder.id << " | Price: " << FormatPrice(BestBuyPrice) << " | Quantity: " << TradeQuantity << " | Order Type: Market" << std::endl;
 
             if (BestBuyOrder.quantity == 0)
             {
@@ -112,7 +114,7 @@ void OrderBook::HandleLimitBuy(Order &NewOrder)
             BestSellOrder.quantity -= TradeQuantity;
 
             tradeHistory.AddTrade(NewOrder.id, BestSellOrder.id, BestSellPrice, TradeQuantity, AggressorSide::Buy);
-            std::cout << "TRADE: Buy Order " << NewOrder.id << " matched with Sell Order " << BestSellOrder.id << " | Price: " << BestSellPrice << " | Quantity: " << TradeQuantity << " | Order Type: Limit" << std::endl;
+            std::cout << "TRADE: Buy Order " << NewOrder.id << " matched with Sell Order " << BestSellOrder.id << " | Price: " << FormatPrice(BestSellPrice) << " | Quantity: " << TradeQuantity << " | Order Type: Limit" << std::endl;
 
             if (BestSellOrder.quantity == 0)
             {
@@ -156,7 +158,7 @@ void OrderBook::HandleLimitSell(Order &NewOrder)
             BestBuyOrder.quantity -= TradeQuantity;
 
             tradeHistory.AddTrade(BestBuyOrder.id, NewOrder.id, BestBuyPrice, TradeQuantity, AggressorSide::Sell);
-            std::cout << "TRADE: Sell Order " << NewOrder.id << " matched with Buy Order " << BestBuyOrder.id << " | Price: " << BestBuyPrice << " | Quantity: " << TradeQuantity << " | Order Type: Limit" << std::endl;
+            std::cout << "TRADE: Sell Order " << NewOrder.id << " matched with Buy Order " << BestBuyOrder.id << " | Price: " << FormatPrice(BestBuyPrice) << " | Quantity: " << TradeQuantity << " | Order Type: Limit" << std::endl;
 
             if (BestBuyOrder.quantity == 0)
             {
@@ -285,7 +287,7 @@ void OrderBook::PrintOrderBook() const
             for (const Order &order : orders)
             {
                 std::cout << std::left
-                          << std::setw(12) << "$" << (price / 100)
+                          << std::setw(12) << FormatPrice(price)
                           << std::setw(12) << order.quantity
                           << std::setw(12) << order.id
                           << std::setw(12) << order.sequenceNumber;
@@ -318,13 +320,13 @@ void OrderBook::PrintOrderBook() const
 
         if (spread < 0)
         {
-            std::cout << "Book crossed. Spread: " << spread << std::endl;
+            std::cout << "Book crossed. Spread: -" << FormatPrice(static_cast<std::uint64_t>(-spread)) << std::endl;
         }
         else
         {
-            std::cout << "Best Bid: " << bestBid
-                      << " | Best Ask: " << bestAsk
-                      << " | Spread: " << spread
+            std::cout << "Best Bid: " << FormatPrice(bestBid)
+                      << " | Best Ask: " << FormatPrice(bestAsk)
+                      << " | Spread: " << FormatPrice(static_cast<std::uint64_t>(spread))
                       << std::endl;
         }
     }
@@ -362,7 +364,7 @@ void OrderBook::PrintOrderBook() const
             for (const Order &order : orders)
             {
                 std::cout << std::left
-                          << std::setw(12) << price
+                          << std::setw(12) << FormatPrice(price)
                           << std::setw(12) << order.quantity
                           << std::setw(12) << order.id
                           << std::setw(12) << order.sequenceNumber;
