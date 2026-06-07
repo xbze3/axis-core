@@ -14,6 +14,8 @@ OrderBook::OrderBook(TradeHistory &tradeHistory) : tradeHistory(tradeHistory)
 
 void OrderBook::HandleMarketBuy(Order &NewOrder)
 {
+    int OriginalQuantity = NewOrder.quantity;
+
     while (NewOrder.quantity > 0 && !SellOrders.empty())
     {
         auto BestSell = SellOrders.begin();
@@ -47,12 +49,21 @@ void OrderBook::HandleMarketBuy(Order &NewOrder)
 
     if (NewOrder.quantity > 0)
     {
-        std::cout << "MARKET BUY ORDER " << NewOrder.id << " partially filled. Unfilled quantity cancelled: " << NewOrder.quantity << std::endl;
+        if (NewOrder.quantity == OriginalQuantity)
+        {
+            std::cout << "MARKET BUY ORDER " << NewOrder.id << " could not be filled. Full quantity cancelled: " << NewOrder.quantity << std::endl;
+        }
+        else
+        {
+            std::cout << "MARKET BUY ORDER " << NewOrder.id << " partially filled. Unfilled quantity cancelled: " << NewOrder.quantity << std::endl;
+        }
     }
 }
 
 void OrderBook::HandleMarketSell(Order &NewOrder)
 {
+    int OriginalQuantity = NewOrder.quantity;
+
     while (NewOrder.quantity > 0 && !BuyOrders.empty())
     {
         auto BestBuy = BuyOrders.begin();
@@ -86,7 +97,14 @@ void OrderBook::HandleMarketSell(Order &NewOrder)
 
     if (NewOrder.quantity > 0)
     {
-        std::cout << "MARKET SELL ORDER " << NewOrder.id << " partially filled. Unfilled quantity cancelled: " << NewOrder.quantity << std::endl;
+        if (NewOrder.quantity == OriginalQuantity)
+        {
+            std::cout << "MARKET SELL ORDER " << NewOrder.id << " could not be filled. Full quantity cancelled: " << NewOrder.quantity << std::endl;
+        }
+        else
+        {
+            std::cout << "MARKET SELL ORDER " << NewOrder.id << " partially filled. Unfilled quantity cancelled: " << NewOrder.quantity << std::endl;
+        }
     }
 }
 

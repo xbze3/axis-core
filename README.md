@@ -26,7 +26,7 @@ The order book supports:
 - Shared trade history
 - Individual trade printing
 - Trade history display
-- Integer-based price ticks instead of floating-point prices
+- Integer-based price ticks
 - Interactive command-line order entry
 - User-friendly price input such as `100.50`
 - Basic validation for invalid price and quantity values
@@ -44,7 +44,7 @@ This project helped me explore questions such as:
 - What happens when an order is only partially filled?
 - How are market orders different from limit orders?
 - How can price-time priority be represented with C++ containers?
-- Why are integer price ticks safer than floating-point prices in trading-style systems?
+- How can integer price ticks be used for safer price comparison and display?
 - How can a terminal interface guide users through order creation?
 
 ---
@@ -67,20 +67,11 @@ Each order stores information such as:
 
 ### Price Ticks
 
-Prices are stored as integer ticks using `std::uint64_t` instead of `double`.
+Prices are stored internally as integer ticks using `std::uint64_t`.
 
-This avoids floating-point precision issues when comparing, sorting, and matching prices.
+Internally, the order book compares integer values like `10050` and `10200`. When prices are shown to the user, shared formatting helpers display them as dollar-style values such as `$100.50` and `$102.00`.
 
-For example, if the system treats one tick as one cent:
-
-```text
-10050 ticks = 100.50
-10200 ticks = 102.00
-```
-
-Internally, the order book compares integer values like `10050` and `10200`, which is safer and more predictable than comparing decimal floating-point values.
-
-The interactive CLI accepts user-friendly decimal-style input such as:
+The interactive CLI accepts user-friendly price input such as:
 
 ```text
 100
@@ -170,7 +161,7 @@ The project uses `std::map` and `std::deque` to model the order book.
 std::map<std::uint64_t, std::deque<Order>, std::greater<std::uint64_t>> BuyOrders;
 ```
 
-This stores buy orders grouped by price ticks, with the highest price first.
+This stores buy orders grouped by price ticks, with the highest price first. These ticks are formatted as dollar-style prices when printed.
 
 ### Sell Orders
 
@@ -178,7 +169,7 @@ This stores buy orders grouped by price ticks, with the highest price first.
 std::map<std::uint64_t, std::deque<Order>> SellOrders;
 ```
 
-This stores sell orders grouped by price ticks, with the lowest price first.
+This stores sell orders grouped by price ticks, with the lowest price first. These ticks are formatted as dollar-style prices when printed.
 
 ### Why `std::deque`
 
@@ -266,7 +257,7 @@ This keeps the high-level flow cleaner while keeping matching behavior inside th
 
 ## Price Input and Display
 
-The CLI reads limit order prices as strings, then converts them into integer price ticks.
+The CLI reads limit order prices as strings, then converts them into integer price ticks for internal matching.
 
 Examples:
 
@@ -277,14 +268,27 @@ Input: 100.50   -> 10050 ticks
 Input: 99.75    -> 9975 ticks
 ```
 
-Prices can also be formatted back into display form with a dollar sign:
+Prices are formatted back into display form with a dollar sign:
 
 ```text
 10050 ticks -> $100.50
 9975 ticks  -> $99.75
 ```
 
-This keeps internal matching safe while still allowing the user to enter and view familiar price values.
+This keeps internal matching based on ticks while allowing submitted orders, trade messages, order book output, best bid, best ask, and spread values to display as familiar price values.
+
+Order book rows, trade messages, trade history entries, and spread values are displayed using the same formatting helper.
+
+### Shared Utility Functions
+
+Shared formatting logic is kept in a utility component:
+
+```text
+include/Utils.hpp
+src/Utils.cpp
+```
+
+This avoids redefining helper functions in multiple `.cpp` files and allows `main.cpp`, `OrderBook.cpp`, and other components to use the same `FormatPrice` logic.
 
 ---
 
@@ -320,8 +324,8 @@ After submission, the order book and trade history are displayed.
 ## Example Output
 
 ```text
-TRADE: Buy Order 6 matched with Sell Order 3 | Price: 10125 | Quantity: 3 | Order Type: Limit
-TRADE: Buy Order 6 matched with Sell Order 4 | Price: 10200 | Quantity: 12 | Order Type: Limit
+TRADE: Buy Order 6 matched with Sell Order 3 | Price: $101.25 | Quantity: 3 | Order Type: Limit
+TRADE: Buy Order 6 matched with Sell Order 4 | Price: $102.00 | Quantity: 12 | Order Type: Limit
 
 ############################################################
 #                       ORDER BOOK                         #
@@ -341,11 +345,11 @@ Spread unavailable. Both buy and sell sides need orders.
 ============================================================
 PRICE       QTY         ORDER ID    SEQ         LEVEL QTY
 ------------------------------------------------------------
-10200       5           6           6           5
+$102.00     5           6           6           5
 ------------------------------------------------------------
-10050       10          1           1           10
+$100.50     10          1           1           10
 ------------------------------------------------------------
-9975        5           2           2           5
+$99.75      5           2           2           5
 ------------------------------------------------------------
 
 ====================== TRADE HISTORY ======================
@@ -354,7 +358,7 @@ Total Trades Executed: 3
 =============== Trade: 1 ===============
 Buy Order ID: 5
 Sell Order ID: 3
-Trade Price: 10125
+Trade Price: $101.25
 Trade Quantity: 4
 Aggressor Side: Buy
 Executed At: 2026-05-31 20:59:54
@@ -373,13 +377,15 @@ cpp-orderbook-engine/
 │   ├── Order.hpp
 │   ├── OrderBook.hpp
 │   ├── Trade.hpp
-│   └── TradeHistory.hpp
+│   ├── TradeHistory.hpp
+│   └── Utils.hpp
 │
 ├── src/
 │   ├── Order.cpp
 │   ├── OrderBook.cpp
 │   ├── Trade.cpp
-│   └── TradeHistory.cpp
+│   ├── TradeHistory.cpp
+│   └── Utils.cpp
 │
 ├── tests/
 │   └── TestLogic.cpp
@@ -396,7 +402,7 @@ cpp-orderbook-engine/
 From the project root, compile with:
 
 ```bash
-g++ main.cpp src/Order.cpp src/OrderBook.cpp src/Trade.cpp src/TradeHistory.cpp -I include -o main
+g++ main.cpp src/Order.cpp src/OrderBook.cpp src/Trade.cpp src/TradeHistory.cpp src/Utils.cpp -I include -o main
 ```
 
 Run with:
@@ -418,7 +424,7 @@ On Windows PowerShell:
 If using `tests/TestLogic.cpp`, compile with:
 
 ```bash
-g++ tests/TestLogic.cpp src/Order.cpp src/OrderBook.cpp src/Trade.cpp src/TradeHistory.cpp -I include -o TestLogic
+g++ tests/TestLogic.cpp src/Order.cpp src/OrderBook.cpp src/Trade.cpp src/TradeHistory.cpp src/Utils.cpp -I include -o TestLogic
 ```
 
 Run with:
@@ -449,9 +455,9 @@ On Windows PowerShell:
 - Best bid, best ask, and spread display
 - Integer-based price ticks using `std::uint64_t`
 - Decimal-style user price input converted into price ticks
-- Dollar-style price formatting for submitted order display
+- Dollar-style price formatting for submitted orders, order book output, trade messages, trade history, and spread display
 - Trade recording through a shared `TradeHistory` object
-- Trade records with buy order ID, sell order ID, price ticks, quantity, aggressor side, and timestamp
+- Trade records with buy order ID, sell order ID, execution price, quantity, aggressor side, and timestamp
 - Individual trade printing
 - Full trade history printing
 - Separated order handling logic for market buys, market sells, limit buys, and limit sells
@@ -470,8 +476,7 @@ Possible next steps:
 - Add CSV export for order and trade history
 - Add performance benchmarks
 - Add support for configurable tick sizes
-- Add formatted price display inside `OrderBook` and `TradeHistory`
-- Add safer spread display for crossed-book debugging
+- Improve crossed-book and negative spread display for debugging
 - Add stronger validation for malformed price input
 - Add support for multiple instruments/order books sharing one trade history
 
@@ -490,6 +495,8 @@ This project helped me practice:
 - Iterators
 - Integer-based price representation
 - String-to-integer price parsing
+- Shared utility functions
+- Shared formatting utilities
 - Price-time priority
 - Matching engine logic
 - Partial fills
