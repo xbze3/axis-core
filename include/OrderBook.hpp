@@ -20,10 +20,10 @@ class OrderBook
 
     std::unordered_map<std::uint64_t, OrderLocation> OrderLocations;
 
-    TradeHistory &tradeHistory;
+    TradeHistory tradeHistory;
 
 public:
-    OrderBook(TradeHistory &tradeHistory);
+    OrderBook();
 
     void HandleMarketBuy(Order &NewOrder);
     void HandleMarketSell(Order &NewOrder);
@@ -34,6 +34,8 @@ public:
     void AddOrder(OrderSide side, OrderType type, std::uint64_t priceTicks, int quantity);
 
     void CancelOrder(std::uint64_t id);
+
+    void PrintTradeHistory() const;
 
     void PrintOrderBook() const;
 };

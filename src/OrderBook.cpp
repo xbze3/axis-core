@@ -4,7 +4,7 @@
 #include "OrderBook.hpp"
 #include "Utils.hpp"
 
-OrderBook::OrderBook(TradeHistory &tradeHistory) : tradeHistory(tradeHistory)
+OrderBook::OrderBook()
 {
     nextOrderId = 1;
     nextOrderSequenceNumber = 1;
@@ -462,4 +462,9 @@ void OrderBook::PrintOrderBook() const
 
     std::cout << BOLD << CYAN << "############################################################\n"
               << RESET << "\n";
+}
+
+void OrderBook::PrintTradeHistory() const
+{
+    tradeHistory.PrintTradeHistory();
 }

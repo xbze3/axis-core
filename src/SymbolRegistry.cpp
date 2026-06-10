@@ -7,7 +7,6 @@ SymbolRegistry::SymbolRegistry() : nextInstrumentId(1)
 {
 }
 
-
 std::string SymbolRegistry::NormalizeSymbol(const std::string &symbol) const
 {
     std::string normalized = symbol;
@@ -34,11 +33,13 @@ bool SymbolRegistry::RegisterInstrument(const std::string &symbol)
 
     if (normalizedSymbol.empty())
     {
+        // std::cout << "REGISTER REJECTED: Symbol cannot be empty." << std::endl;
         return false;
     }
 
     if (symbolToInstrumentId.find(normalizedSymbol) != symbolToInstrumentId.end())
     {
+        // std::cout << "REGISTER REJECTED: Symbol " << normalizedSymbol << " is already registered." << std::endl;
         return false;
     }
 
@@ -47,7 +48,35 @@ bool SymbolRegistry::RegisterInstrument(const std::string &symbol)
     symbolToInstrumentId.emplace(normalizedSymbol, instrumentId);
     instrumentIdToSymbol.emplace(instrumentId.value, normalizedSymbol);
 
+    // std::cout << "REGISTERED: Symbol " << normalizedSymbol << " | Instrument ID: " << instrumentId.value << std::endl;
+
     nextInstrumentId++;
+
+    return true;
+}
+
+bool SymbolRegistry::UnregisterInstrument(const std::string &symbol)
+{
+    std::string normalizedSymbol = NormalizeSymbol(symbol);
+
+    if (normalizedSymbol.empty())
+    {
+        // std::cout << "UNREGISTER REJECTED: Symbol cannot be empty." << std::endl;
+        return false;
+    }
+
+    InstrumentId instrumentId(0);
+
+    if (!TryGetInstrumentId(normalizedSymbol, instrumentId))
+    {
+        // std::cout << "UNREGISTER REJECTED: Symbol " << normalizedSymbol << " is not registered." << std::endl;
+        return false;
+    }
+
+    symbolToInstrumentId.erase(normalizedSymbol);
+    instrumentIdToSymbol.erase(instrumentId.value);
+
+    // std::cout << "UNREGISTERED: Symbol " << normalizedSymbol << " | Instrument ID: " << instrumentId.value << std::endl;
 
     return true;
 }
