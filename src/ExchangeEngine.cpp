@@ -1,4 +1,6 @@
 #include <iostream>
+#include <iomanip>
+#include <iostream>
 
 #include "ExchangeEngine.hpp"
 #include "SymbolRegistry.hpp"
@@ -128,16 +130,174 @@ bool ExchangeEngine::HasBook(const std::string &symbol) const
 
 OrderBook *ExchangeEngine::GetBook(const std::string &symbol)
 {
+    InstrumentId id(0);
+
+    if (!registry.TryGetInstrumentId(symbol, id))
+    {
+        return nullptr;
+    }
+
+    auto book = OrderBooks.find(id);
+
+    if (book == OrderBooks.end())
+    {
+        return nullptr;
+    }
+
+    return &book->second;
 }
 
 const OrderBook *ExchangeEngine::GetBook(const std::string &symbol) const
 {
+    InstrumentId id(0);
+
+    if (!registry.TryGetInstrumentId(symbol, id))
+    {
+        return nullptr;
+    }
+
+    auto book = OrderBooks.find(id);
+
+    if (book == OrderBooks.end())
+    {
+        return nullptr;
+    }
+
+    return &book->second;
 }
 
 void ExchangeEngine::PrintBook(const std::string &symbol) const
 {
+    const std::string RESET = "\033[0m";
+    const std::string BOLD = "\033[1m";
+    const std::string DIM = "\033[2m";
+    const std::string CYAN = "\033[36m";
+    const std::string RED = "\033[31m";
+
+    InstrumentId id(0);
+
+    if (!registry.TryGetInstrumentId(symbol, id))
+    {
+        std::cout << RED << "PRINT REJECTED: Symbol " << symbol << " is not registered." << RESET << std::endl;
+        return;
+    }
+
+    auto book = OrderBooks.find(id);
+
+    if (book == OrderBooks.end())
+    {
+        std::cout << RED << "PRINT REJECTED: No order book found for symbol " << symbol << "." << RESET << std::endl;
+        return;
+    }
+
+    std::string normalizedSymbol;
+
+    if (!registry.TryGetSymbol(id, normalizedSymbol))
+    {
+        normalizedSymbol = symbol;
+    }
+
+    std::cout << BOLD << CYAN << "\n############################################################\n"
+              << "#                     EXCHANGE BOOK                        #\n"
+              << "############################################################\n"
+              << RESET;
+
+    std::cout << "  " << std::left << std::setw(20) << "Symbol:" << BOLD << normalizedSymbol << RESET << "\n";
+    std::cout << "  " << std::left << std::setw(20) << "Instrument ID:" << BOLD << id.value << RESET << "\n";
+
+    std::cout << DIM << "  ----------------------------------------------------------\n"
+              << RESET;
+
+    book->second.PrintOrderBook();
+}
+
+void ExchangeEngine::PrintTradeHistory(const std::string &symbol) const
+{
+    const std::string RESET = "\033[0m";
+    const std::string BOLD = "\033[1m";
+    const std::string RED = "\033[31m";
+    const std::string CYAN = "\033[36m";
+
+    InstrumentId id(0);
+
+    if (!registry.TryGetInstrumentId(symbol, id))
+    {
+        std::cout << RED << "TRADE HISTORY PRINT REJECTED: Symbol " << symbol << " is not registered." << RESET << std::endl;
+        return;
+    }
+
+    auto book = OrderBooks.find(id);
+
+    if (book == OrderBooks.end())
+    {
+        std::cout << RED << "TRADE HISTORY PRINT REJECTED: No order book found for symbol " << symbol << "." << RESET << std::endl;
+        return;
+    }
+
+    std::string normalizedSymbol;
+
+    if (!registry.TryGetSymbol(id, normalizedSymbol))
+    {
+        normalizedSymbol = symbol;
+    }
+
+    std::cout << BOLD << CYAN << "\n############################################################\n"
+              << "#                 EXCHANGE TRADE HISTORY                  #\n"
+              << "############################################################\n"
+              << RESET;
+
+    std::cout << "  Symbol: " << BOLD << normalizedSymbol << RESET
+              << "  |  Instrument ID: " << BOLD << id.value << RESET << "\n";
+
+    book->second.PrintTradeHistory();
 }
 
 void ExchangeEngine::PrintAllBooks() const
 {
+    const std::string RESET = "\033[0m";
+    const std::string BOLD = "\033[1m";
+    const std::string DIM = "\033[2m";
+    const std::string CYAN = "\033[36m";
+
+    std::cout << BOLD << CYAN << "\n############################################################\n"
+              << "#                    EXCHANGE BOOKS                        #\n"
+              << "############################################################\n"
+              << RESET;
+
+    if (OrderBooks.empty())
+    {
+        std::cout << DIM << "\n  No order books available.\n\n"
+                  << RESET;
+
+        std::cout << CYAN << "############################################################\n"
+                  << RESET << "\n";
+
+        return;
+    }
+
+    std::cout << "\n"
+              << "  " << std::left << std::setw(20) << "Total books:" << BOLD << OrderBooks.size() << RESET << "\n";
+
+    std::cout << DIM << "  ----------------------------------------------------------\n"
+              << RESET;
+
+    for (const auto &[instrumentId, orderBook] : OrderBooks)
+    {
+        std::string symbol;
+
+        if (!registry.TryGetSymbol(instrumentId, symbol))
+        {
+            symbol = "UNKNOWN";
+        }
+
+        std::cout << BOLD << CYAN << "\n============================================================\n"
+                  << "  SYMBOL: " << symbol << "  |  INSTRUMENT ID: " << instrumentId.value << "\n"
+                  << "============================================================\n"
+                  << RESET;
+
+        orderBook.PrintOrderBook();
+    }
+
+    std::cout << BOLD << CYAN << "############################################################\n"
+              << RESET << "\n";
 }

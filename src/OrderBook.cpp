@@ -35,6 +35,7 @@ void OrderBook::HandleMarketBuy(Order &NewOrder)
 
             if (BestSellOrder.quantity == 0)
             {
+                OrderLocations.erase(BestSellOrder.id);
                 OrdersAtBestSellPrice.pop_front();
             }
         }
@@ -83,6 +84,7 @@ void OrderBook::HandleMarketSell(Order &NewOrder)
 
             if (BestBuyOrder.quantity == 0)
             {
+                OrderLocations.erase(BestBuyOrder.id);
                 OrdersAtBestBuyPrice.pop_front();
             }
         }

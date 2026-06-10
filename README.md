@@ -1,8 +1,8 @@
-# C++ OrderBook Engine
+# Axis Exchange
 
-A small C++ order book and matching engine that models the basic flow of a trading system.
+Axis Exchange is a small C++ exchange simulator with order books, symbol routing, matching, cancellations, and trade history.
 
-I built this project to understand how orders are stored, matched, filled, cancelled, and displayed. It is not meant to be a production exchange. It is a learning project focused on price-time priority, market and limit orders, trade recording, and order lookup.
+I built this project to understand how orders are stored, matched, filled, cancelled, routed by symbol, and displayed. It is not a production exchange. It is a learning project focused on price-time priority, order matching, trade recording, order lookup, and basic exchange-style routing.
 
 ---
 
@@ -17,7 +17,9 @@ I built this project to understand how orders are stored, matched, filled, cance
 - Price-level cleanup after fills and cancellations
 - Order lookup using saved order locations
 - Best bid, best ask, and spread display
-- Trade recording through a shared trade history
+- Trade history per order book
+- Multiple order books through an exchange engine
+- Symbol registry for routing orders by symbol
 - Integer-based price ticks using `std::uint64_t`
 - User-friendly price input such as `100.50`
 - Formatted terminal output
@@ -33,9 +35,34 @@ The project is built around a few main parts:
 - `OrderBook` stores active orders and runs the matching logic.
 - `OrderLocation` tracks where a resting order lives in the book.
 - `Trade` represents one completed match.
-- `TradeHistory` stores and prints executed trades.
+- `TradeHistory` stores executed trades.
+- `InstrumentId` represents the internal ID for a symbol.
+- `SymbolRegistry` maps symbols to instrument IDs.
+- `ExchangeEngine` manages multiple order books and routes orders to the correct book.
 
-Buy orders are grouped by price with the highest price first. Sell orders are grouped by price with the lowest price first. Inside each price level, orders are stored in arrival order, so earlier orders at the same price get priority.
+Each `OrderBook` owns its own orders and trade history. The `ExchangeEngine` sits above the books and decides which book should receive an order.
+
+---
+
+## Exchange Engine
+
+The `ExchangeEngine` manages multiple books.
+
+Example:
+
+```text
+BTI -> OrderBook
+DTC -> OrderBook
+DBL -> OrderBook
+```
+
+Orders are submitted with a symbol:
+
+```cpp
+engine.SubmitOrder("BTI", OrderSide::Buy, OrderType::Limit, 10050, 10);
+```
+
+The engine uses the `SymbolRegistry` to find the correct `InstrumentId`, then routes the order to the matching `OrderBook`.
 
 ---
 
@@ -59,8 +86,6 @@ Limit orders may rest in the book if they are not fully matched. Market orders t
 
 Prices are stored internally as integer ticks instead of floating-point values.
 
-For example:
-
 ```text
 10050 ticks -> $100.50
 9975 ticks  -> $99.75
@@ -75,7 +100,7 @@ The CLI accepts prices like:
 99.75
 ```
 
-and converts them into ticks before sending them to the order book. This keeps matching simple and avoids floating-point comparison issues.
+and converts them into ticks before sending them to the engine.
 
 Price and timestamp formatting are shared through:
 
@@ -112,15 +137,24 @@ std::unordered_map<std::uint64_t, OrderLocation> OrderLocations;
 
 This maps an order ID to its current location in the book.
 
-`OrderLocation` stores the side, price level, and list iterator for a resting order. This allows the engine to cancel an order directly without scanning every price level.
+`OrderLocation` stores the side, price level, and list iterator for a resting order. This allows direct cancellation without scanning every price level.
 
-### Trade History
+### Symbol Registry
 
 ```cpp
-std::vector<Trade> trades;
+std::unordered_map<std::string, InstrumentId> symbolToInstrumentId;
+std::unordered_map<std::uint64_t, std::string> instrumentIdToSymbol;
 ```
 
-Trades are stored in a vector because each new trade is simply appended to the history.
+The registry maps symbols such as `BTI` or `DTC` to internal instrument IDs.
+
+### Exchange Books
+
+```cpp
+std::map<InstrumentId, OrderBook> OrderBooks;
+```
+
+The exchange engine stores one order book per instrument.
 
 ---
 
@@ -150,25 +184,11 @@ Any remaining market quantity is cancelled.
 
 Resting orders can be cancelled by order ID.
 
-When a limit order is added to the book, its location is saved in `OrderLocations`. When `CancelOrder` is called, the engine uses the saved side, price level, and iterator to remove the order from the correct list.
+When a limit order rests in the book, its location is saved in `OrderLocations`. When `CancelOrder` is called, the engine uses the saved side, price level, and iterator to remove the order from the correct list.
 
-If the price level becomes empty after the cancellation, that price level is removed from the book. The order ID is also removed from `OrderLocations`.
+If the price level becomes empty, that level is removed from the book. The order ID is also removed from `OrderLocations`.
 
-The cancellation logic uses `find()` instead of `operator[]` when looking up price levels, so a missing level does not accidentally create a new empty level.
-
----
-
-## OrderBook Methods
-
-The matching and cancellation logic is split into smaller methods:
-
-- `HandleMarketBuy`
-- `HandleMarketSell`
-- `HandleLimitBuy`
-- `HandleLimitSell`
-- `CancelOrder`
-
-`AddOrder` handles validation, creates the incoming order, and sends it to the correct handler based on side and order type.
+Filled orders are removed from `OrderLocations` so they cannot be cancelled later.
 
 ---
 
@@ -183,45 +203,35 @@ The menu allows you to:
 2. View Order Book
 3. View Trade History
 4. Cancel Order
-5. Exit
+5. View All Books
+6. Exit
 ```
 
-When placing an order, the CLI asks for the side, type, quantity, and price if it is a limit order.
-
-When cancelling an order, the CLI asks for the order ID and then prints the updated order book and trade history.
+The CLI starts by loading a few sample GSE-style symbols into the exchange engine.
 
 ---
 
 ## Example CLI Flow
 
 ```text
-================ C++ ORDERBOOK ENGINE ================
 1. Place Order
 2. View Order Book
 3. View Trade History
 4. Cancel Order
-5. Exit
-======================================================
-Select an option: 1
+5. View All Books
+6. Exit
 
-Select Order Side:
-1. Buy
-2. Sell
-Choice: 1
-
-Select Order Type:
-1. Limit
-2. Market
-Choice: 1
-
-Enter Quantity: 10
-Enter Limit Price: 100.50
+Symbol   > BTI
+Side     > 1
+Type     > 1
+Quantity > 10
+Price    > 100.50
 ```
 
 Example cancellation:
 
 ```text
-Select an option: 4
+Symbol   > BTI
 Order ID > 2
 
 CANCELLED: Buy Order 2 | Price: $99.75
@@ -243,23 +253,21 @@ TRADE: Buy Order 6 matched with Sell Order 4 | Price: $102.00 | Quantity: 12 | O
 ============================================================
   SELL SIDE / ASKS
 ============================================================
-PRICE       QTY         ORDER ID    SEQ         LEVEL QTY
-------------------------------------------------------------
-No sell orders.
+  No sell orders.
 
-Spread unavailable. Both buy and sell sides need orders.
+  Spread unavailable - both sides need orders.
 
 ============================================================
   BUY SIDE / BIDS
 ============================================================
-PRICE       QTY         ORDER ID    SEQ         LEVEL QTY
-------------------------------------------------------------
-$102.00     5           6           6           5
-------------------------------------------------------------
-$100.50     10          1           1           10
-------------------------------------------------------------
-$99.75      5           2           2           5
-------------------------------------------------------------
+  PRICE       QTY       ORDER ID    SEQ         LVL QTY
+  ----------------------------------------------------------
+  $102.00     5         6           6           5
+  ----------------------------------------------------------
+  $100.50     10        1           1           10
+  ----------------------------------------------------------
+  $99.75      5         2           2           5
+  ----------------------------------------------------------
 ```
 
 ---
@@ -271,17 +279,23 @@ cpp-orderbook-engine/
 │
 ├── include/
 │   ├── Enums.hpp
+│   ├── ExchangeEngine.hpp
+│   ├── InstrumentId.hpp
 │   ├── Order.hpp
 │   ├── OrderBook.hpp
 │   ├── OrderLocation.hpp
+│   ├── SymbolRegistry.hpp
 │   ├── Trade.hpp
 │   ├── TradeHistory.hpp
 │   └── Utils.hpp
 │
 ├── src/
+│   ├── ExchangeEngine.cpp
+│   ├── InstrumentId.cpp
 │   ├── Order.cpp
 │   ├── OrderBook.cpp
 │   ├── OrderLocation.cpp
+│   ├── SymbolRegistry.cpp
 │   ├── Trade.cpp
 │   ├── TradeHistory.cpp
 │   └── Utils.cpp
@@ -301,7 +315,7 @@ cpp-orderbook-engine/
 From the project root:
 
 ```bash
-g++ main.cpp src/Order.cpp src/OrderBook.cpp src/OrderLocation.cpp src/Trade.cpp src/TradeHistory.cpp src/Utils.cpp -I include -o main
+g++ main.cpp src/ExchangeEngine.cpp src/InstrumentId.cpp src/Order.cpp src/OrderBook.cpp src/OrderLocation.cpp src/SymbolRegistry.cpp src/Trade.cpp src/TradeHistory.cpp src/Utils.cpp -I include -o main
 ```
 
 Run:
@@ -323,7 +337,7 @@ On Windows PowerShell:
 Compile:
 
 ```bash
-g++ tests/TestLogic.cpp src/Order.cpp src/OrderBook.cpp src/OrderLocation.cpp src/Trade.cpp src/TradeHistory.cpp src/Utils.cpp -I include -o TestLogic
+g++ tests/TestLogic.cpp src/ExchangeEngine.cpp src/InstrumentId.cpp src/Order.cpp src/OrderBook.cpp src/OrderLocation.cpp src/SymbolRegistry.cpp src/Trade.cpp src/TradeHistory.cpp src/Utils.cpp -I include -o TestLogic
 ```
 
 Run:
@@ -353,6 +367,8 @@ This project helped me practice:
 - Partial fills
 - Order cancellation
 - Trade history design
+- Symbol routing
+- Multi-book exchange structure
 - Multi-file C++ project structure
 - Simple terminal UI design
 
@@ -360,14 +376,15 @@ This project helped me practice:
 
 ## Future Improvements
 
-Some possible next steps:
+Possible next steps:
 
-- Add more tests for cancellation and edge cases
+- Add a fuller GSE simulation setup
+- Add more tests for edge cases
 - Add order modification
 - Add CSV export for orders and trades
 - Add performance benchmarks
 - Support configurable tick sizes
-- Support multiple instruments
+- Add structured return results instead of only printing
 - Add an API or WebSocket layer for external order submission
 
 ---

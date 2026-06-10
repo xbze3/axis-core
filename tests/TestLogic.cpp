@@ -1,81 +1,116 @@
 #include <iostream>
-#include "OrderBook.hpp"
-#include "TradeHistory.hpp"
+
+#include "ExchangeEngine.hpp"
 
 int main()
 {
-    TradeHistory history;
-    OrderBook book(history);
+    ExchangeEngine engine;
+
+    engine.AddBook("BTI");
 
     std::cout << "\n========== TEST 1: ADD RESTING LIMIT ORDERS ==========\n";
 
-    book.AddOrder(OrderSide::Buy, OrderType::Limit, 10050, 10);
-    book.AddOrder(OrderSide::Buy, OrderType::Limit, 9975, 5);
-    book.AddOrder(OrderSide::Sell, OrderType::Limit, 10125, 7);
-    book.AddOrder(OrderSide::Sell, OrderType::Limit, 10200, 12);
+    engine.SubmitOrder("BTI", OrderSide::Buy, OrderType::Limit, 10050, 10);
+    engine.SubmitOrder("BTI", OrderSide::Buy, OrderType::Limit, 9975, 5);
+    engine.SubmitOrder("BTI", OrderSide::Sell, OrderType::Limit, 10125, 7);
+    engine.SubmitOrder("BTI", OrderSide::Sell, OrderType::Limit, 10200, 12);
 
-    book.PrintOrderBook();
-    history.PrintTradeHistory();
+    engine.PrintBook("BTI");
+    engine.PrintTradeHistory("BTI");
 
     std::cout << "\n========== TEST 2: BUY LIMIT MATCHES SELL ==========\n";
 
-    book.AddOrder(OrderSide::Buy, OrderType::Limit, 10125, 4);
+    engine.SubmitOrder("BTI", OrderSide::Buy, OrderType::Limit, 10125, 4);
 
-    book.PrintOrderBook();
-    history.PrintTradeHistory();
+    engine.PrintBook("BTI");
+    engine.PrintTradeHistory("BTI");
 
     std::cout << "\n========== TEST 3: BUY LIMIT PARTIAL FILL ==========\n";
 
-    book.AddOrder(OrderSide::Buy, OrderType::Limit, 10200, 20);
+    engine.SubmitOrder("BTI", OrderSide::Buy, OrderType::Limit, 10200, 20);
 
-    book.PrintOrderBook();
-    history.PrintTradeHistory();
+    engine.PrintBook("BTI");
+    engine.PrintTradeHistory("BTI");
 
     std::cout << "\n========== TEST 4: SELL LIMIT MATCHES BUY ==========\n";
 
-    book.AddOrder(OrderSide::Sell, OrderType::Limit, 10050, 3);
+    engine.SubmitOrder("BTI", OrderSide::Sell, OrderType::Limit, 10050, 3);
 
-    book.PrintOrderBook();
-    history.PrintTradeHistory();
+    engine.PrintBook("BTI");
+    engine.PrintTradeHistory("BTI");
 
     std::cout << "\n========== TEST 5: MARKET BUY ==========\n";
 
-    book.AddOrder(OrderSide::Buy, OrderType::Market, 0, 6);
+    engine.SubmitOrder("BTI", OrderSide::Buy, OrderType::Market, 0, 6);
 
-    book.PrintOrderBook();
-    history.PrintTradeHistory();
+    engine.PrintBook("BTI");
+    engine.PrintTradeHistory("BTI");
 
     std::cout << "\n========== TEST 6: MARKET SELL ==========\n";
 
-    book.AddOrder(OrderSide::Sell, OrderType::Market, 0, 8);
+    engine.SubmitOrder("BTI", OrderSide::Sell, OrderType::Market, 0, 8);
 
-    book.PrintOrderBook();
-    history.PrintTradeHistory();
+    engine.PrintBook("BTI");
+    engine.PrintTradeHistory("BTI");
 
-    std::cout << "\n========== TEST 7: FULLY UNFILLED MARKET BUY ==========\n";
+    std::cout << "\n========== TEST 7: CANCEL FULLY FILLED MARKET-MATCHED ORDER ==========\n";
 
-    book.AddOrder(OrderSide::Buy, OrderType::Market, 0, 10);
+    engine.CancelOrder("BTI", 6);
 
-    book.PrintOrderBook();
-    history.PrintTradeHistory();
+    engine.PrintBook("BTI");
+    engine.PrintTradeHistory("BTI");
 
-    std::cout << "\n========== TEST 8: INVALID ORDERS ==========\n";
+    std::cout << "\n========== TEST 8: FULLY UNFILLED MARKET BUY ==========\n";
 
-    book.AddOrder(OrderSide::Buy, OrderType::Limit, 0, 5);
-    book.AddOrder(OrderSide::Sell, OrderType::Limit, 10000, 0);
-    book.AddOrder(OrderSide::Buy, OrderType::Market, 0, -3);
+    engine.SubmitOrder("BTI", OrderSide::Buy, OrderType::Market, 0, 10);
 
-    book.PrintOrderBook();
-    history.PrintTradeHistory();
+    engine.PrintBook("BTI");
+    engine.PrintTradeHistory("BTI");
 
-    std::cout << "\n========== TEST 9: CANCEL RESTING ORDERS ==========\n";
+    std::cout << "\n========== TEST 9: INVALID ORDERS ==========\n";
 
-    book.CancelOrder(1);
-    book.CancelOrder(2);
-    book.CancelOrder(999);
+    engine.SubmitOrder("BTI", OrderSide::Buy, OrderType::Limit, 0, 5);
+    engine.SubmitOrder("BTI", OrderSide::Sell, OrderType::Limit, 10000, 0);
+    engine.SubmitOrder("BTI", OrderSide::Buy, OrderType::Market, 0, -3);
 
-    book.PrintOrderBook();
-    history.PrintTradeHistory();
+    engine.PrintBook("BTI");
+    engine.PrintTradeHistory("BTI");
+
+    std::cout << "\n========== TEST 10: CANCEL RESTING ORDERS ==========\n";
+
+    engine.CancelOrder("BTI", 1);
+    engine.CancelOrder("BTI", 2);
+    engine.CancelOrder("BTI", 999);
+
+    engine.PrintBook("BTI");
+    engine.PrintTradeHistory("BTI");
+
+    std::cout << "\n========== TEST 11: MULTIPLE BOOKS ==========\n";
+
+    engine.AddBook("DTC");
+
+    engine.SubmitOrder("DTC", OrderSide::Buy, OrderType::Limit, 25000, 15);
+    engine.SubmitOrder("DTC", OrderSide::Sell, OrderType::Limit, 25500, 10);
+    engine.SubmitOrder("DTC", OrderSide::Buy, OrderType::Limit, 25500, 5);
+
+    engine.PrintBook("DTC");
+    engine.PrintTradeHistory("DTC");
+
+    std::cout << "\n========== TEST 12: PRINT ALL BOOKS ==========\n";
+
+    engine.PrintAllBooks();
+
+    std::cout << "\n========== TEST 13: UNKNOWN SYMBOL ==========\n";
+
+    engine.SubmitOrder("UNKNOWN", OrderSide::Buy, OrderType::Limit, 10000, 5);
+    engine.CancelOrder("UNKNOWN", 1);
+    engine.PrintBook("UNKNOWN");
+    engine.PrintTradeHistory("UNKNOWN");
+
+    std::cout << "\n========== TEST 14: REMOVE BOOK ==========\n";
+
+    engine.RemoveBook("DTC");
+    engine.PrintAllBooks();
 
     return 0;
 }

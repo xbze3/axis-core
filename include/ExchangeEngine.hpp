@@ -15,8 +15,6 @@ private:
     SymbolRegistry registry;
     std::map<InstrumentId, OrderBook> OrderBooks;
 
-    OrderBook *GetBook(const std::string &symbol);
-
 public:
     ExchangeEngine();
 
@@ -28,7 +26,9 @@ public:
 
     bool HasBook(const std::string &symbol) const;
     const OrderBook *GetBook(const std::string &symbol) const;
+    OrderBook *GetBook(const std::string &symbol);
 
     void PrintBook(const std::string &symbol) const;
+    void PrintTradeHistory(const std::string &symbol) const;
     void PrintAllBooks() const;
 };

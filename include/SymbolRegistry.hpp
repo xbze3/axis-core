@@ -10,7 +10,7 @@
 class SymbolRegistry
 {
     std::unordered_map<std::string, InstrumentId> symbolToInstrumentId;
-    std::unordered_map<InstrumentId, std::string> instrumentIdToSymbol;
+    std::unordered_map<std::uint64_t, std::string> instrumentIdToSymbol;
 
     std::string NormalizeSymbol(const std::string &symbol) const;
 
