@@ -1,70 +1,45 @@
 #include <iostream>
-#include <ctime>
-#include <iomanip>
 #include <chrono>
-#include "Order.hpp"
+#include <sstream>
+#include <iomanip>
 
-Order::Order(int id, OrderSide side, OrderType type, std::uint64_t priceTicks, int quantity, std::uint64_t sequenceNumber)
+#include "Order.hpp"
+#include "Utils.hpp"
+
+Order::Order(std::uint64_t id, std::uint64_t sequenceNumber, OrderSide side, OrderType type, std::uint64_t priceTicks, int quantity) : id(id), sequenceNumber(sequenceNumber), side(side), type(type), priceTicks(priceTicks), quantity(quantity), createdAt(std::chrono::system_clock::now())
 {
-    this->id = id;
-    this->side = side;
-    this->type = type;
-    this->priceTicks = priceTicks;
-    this->quantity = quantity;
-    this->sequenceNumber = sequenceNumber;
-    this->createdAt = std::chrono::system_clock::now();
 }
 
 void Order::PrintOrder() const
 {
-    // Print Order ID
+    const std::string RESET = "\033[0m";
+    const std::string BOLD = "\033[1m";
+    const std::string DIM = "\033[2m";
+    const std::string GREEN = "\033[32m";
+    const std::string RED = "\033[31m";
+    const std::string CYAN = "\033[36m";
+    const std::string YELLOW = "\033[33m";
 
-    std::cout << "=============== Order: " << id << " ===============" << std::endl;
+    const std::string &sideColor = (side == OrderSide::Buy) ? GREEN : RED;
+    const std::string sideLabel = (side == OrderSide::Buy) ? "BUY" : "SELL";
+    const std::string typeLabel = (type == OrderType::Limit) ? "LIMIT" : "MARKET";
 
-    // Print Order Side
+    std::cout << BOLD << sideColor << "+- ORDER #" << std::setw(6) << std::left << id << "  " << sideLabel << " " << typeLabel << RESET << "\n";
 
-    std::cout << "Order Side: ";
+    std::cout << DIM << "|  " << RESET << std::left << std::setw(14) << "Sequence" << CYAN << sequenceNumber << RESET << "\n";
 
-    if (side == OrderSide::Buy)
-    {
-        std::cout << "Buy" << std::endl;
-    }
-    else
-    {
-        std::cout << "Sell" << std::endl;
-    }
-
-    // Print Order Type
-
-    std::cout << "Order Type: ";
+    std::cout << DIM << "|  " << RESET << std::left << std::setw(14) << "Price";
 
     if (type == OrderType::Market)
     {
-        std::cout << "Market" << std::endl;
+        std::cout << YELLOW << "MARKET" << RESET << "\n";
     }
     else
     {
-        std::cout << "Limit" << std::endl;
+        std::cout << YELLOW << FormatPrice(priceTicks) << RESET << "\n";
     }
 
-    // Print Order Price
+    std::cout << DIM << "|  " << RESET << std::left << std::setw(14) << "Quantity" << quantity << "\n";
 
-    std::cout << "Order Price: $" << (priceTicks / 100) << std::endl;
-
-    // Print Order Quantity
-
-    std::cout << "Order Quantity: " << quantity << std::endl;
-
-    // Print Order Sequence Number
-
-    std::cout << "Order Sequence Number: " << sequenceNumber << std::endl;
-
-    // Print Order CreatedAt
-
-    std::time_t createdTime = std::chrono::system_clock::to_time_t(createdAt);
-
-    std::cout << "Order Created At: " << std::put_time(std::localtime(&createdTime), "%Y-%m-%d %H:%M:%S") << std::endl;
-
-    std::cout << "========================================" << std::endl;
-    std::cout << "\n";
+    std::cout << DIM << "+  " << RESET << std::left << std::setw(14) << "Created at" << DIM << FormatTimestamp(createdAt) << RESET << "\n";
 }

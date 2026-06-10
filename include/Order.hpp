@@ -1,24 +1,23 @@
-#ifndef ORDER_HPP
-#define ORDER_HPP
+#pragma once
 
-#include <chrono>
-#include "Enums.hpp"
+#include <iostream>
 #include <cstdint>
+#include <chrono>
+
+#include "Enums.hpp"
 
 class Order
 {
 public:
-    int id;
+    std::uint64_t id;
+    std::uint64_t sequenceNumber;
     OrderSide side;
     OrderType type;
     std::uint64_t priceTicks;
     int quantity;
-    std::uint64_t sequenceNumber;
     std::chrono::system_clock::time_point createdAt;
 
-    Order(int id, OrderSide side, OrderType type, std::uint64_t priceTicks, int quantity, std::uint64_t sequenceNumber);
+    Order(std::uint64_t id, std::uint64_t sequenceNumber, OrderSide side, OrderType type, std::uint64_t priceTicks, int quantity);
 
     void PrintOrder() const;
 };
-
-#endif

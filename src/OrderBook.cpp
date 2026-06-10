@@ -1,16 +1,14 @@
 #include <iostream>
-#include <iomanip>
-#include <algorithm>
-#include <sstream>
+#include <iterator>
 
-#include "Utils.hpp"
 #include "OrderBook.hpp"
+#include "Utils.hpp"
 
 OrderBook::OrderBook(TradeHistory &tradeHistory) : tradeHistory(tradeHistory)
 {
-    NextOrderID = 1;
-    NextSequenceNumber = 1;
-};
+    nextOrderId = 1;
+    nextOrderSequenceNumber = 1;
+}
 
 void OrderBook::HandleMarketBuy(Order &NewOrder)
 {
@@ -21,7 +19,7 @@ void OrderBook::HandleMarketBuy(Order &NewOrder)
         auto BestSell = SellOrders.begin();
         std::uint64_t BestSellPrice = BestSell->first;
 
-        std::deque<Order> &OrdersAtBestSellPrice = BestSell->second;
+        std::list<Order> &OrdersAtBestSellPrice = BestSell->second;
 
         while (NewOrder.quantity > 0 && !OrdersAtBestSellPrice.empty())
         {
@@ -69,7 +67,7 @@ void OrderBook::HandleMarketSell(Order &NewOrder)
         auto BestBuy = BuyOrders.begin();
         std::uint64_t BestBuyPrice = BestBuy->first;
 
-        std::deque<Order> &OrdersAtBestBuyPrice = BestBuy->second;
+        std::list<Order> &OrdersAtBestBuyPrice = BestBuy->second;
 
         while (NewOrder.quantity > 0 && !OrdersAtBestBuyPrice.empty())
         {
@@ -120,7 +118,7 @@ void OrderBook::HandleLimitBuy(Order &NewOrder)
             break;
         }
 
-        std::deque<Order> &OrdersAtBestSellPrice = BestSell->second;
+        std::list<Order> &OrdersAtBestSellPrice = BestSell->second;
 
         while (NewOrder.quantity > 0 && !OrdersAtBestSellPrice.empty())
         {
@@ -136,6 +134,8 @@ void OrderBook::HandleLimitBuy(Order &NewOrder)
 
             if (BestSellOrder.quantity == 0)
             {
+                OrderLocations.erase(BestSellOrder.id);
+
                 OrdersAtBestSellPrice.pop_front();
             }
         }
@@ -148,7 +148,13 @@ void OrderBook::HandleLimitBuy(Order &NewOrder)
 
     if (NewOrder.quantity > 0)
     {
-        BuyOrders[NewOrder.priceTicks].push_back(NewOrder);
+        std::list<Order> &OrdersAtPrice = BuyOrders[NewOrder.priceTicks];
+
+        OrdersAtPrice.push_back(NewOrder);
+
+        std::list<Order>::iterator NewOrderIterator = std::prev(OrdersAtPrice.end());
+
+        OrderLocations.emplace(NewOrder.id, OrderLocation(NewOrder.side, NewOrder.priceTicks, NewOrderIterator));
     }
 }
 
@@ -164,7 +170,7 @@ void OrderBook::HandleLimitSell(Order &NewOrder)
             break;
         }
 
-        std::deque<Order> &OrdersAtBestBuyPrice = BestBuy->second;
+        std::list<Order> &OrdersAtBestBuyPrice = BestBuy->second;
 
         while (NewOrder.quantity > 0 && !OrdersAtBestBuyPrice.empty())
         {
@@ -180,6 +186,8 @@ void OrderBook::HandleLimitSell(Order &NewOrder)
 
             if (BestBuyOrder.quantity == 0)
             {
+                OrderLocations.erase(BestBuyOrder.id);
+
                 OrdersAtBestBuyPrice.pop_front();
             }
         }
@@ -192,7 +200,13 @@ void OrderBook::HandleLimitSell(Order &NewOrder)
 
     if (NewOrder.quantity > 0)
     {
-        SellOrders[NewOrder.priceTicks].push_back(NewOrder);
+        std::list<Order> &OrdersAtPrice = SellOrders[NewOrder.priceTicks];
+
+        OrdersAtPrice.push_back(NewOrder);
+
+        std::list<Order>::iterator NewOrderIterator = std::prev(OrdersAtPrice.end());
+
+        OrderLocations.emplace(NewOrder.id, OrderLocation(NewOrder.side, NewOrder.priceTicks, NewOrderIterator));
     }
 }
 
@@ -210,7 +224,7 @@ void OrderBook::AddOrder(OrderSide side, OrderType type, std::uint64_t priceTick
         return;
     }
 
-    Order NewOrder(NextOrderID, side, type, priceTicks, quantity, NextSequenceNumber);
+    Order NewOrder(nextOrderId, nextOrderSequenceNumber, side, type, priceTicks, quantity);
 
     if (type == OrderType::Market)
     {
@@ -235,100 +249,78 @@ void OrderBook::AddOrder(OrderSide side, OrderType type, std::uint64_t priceTick
         }
     }
 
-    NextOrderID++;
-    NextSequenceNumber++;
+    nextOrderId++;
+    nextOrderSequenceNumber++;
 }
 
 void OrderBook::PrintOrderBook() const
 {
     const std::string RESET = "\033[0m";
-    const std::string RED = "\033[31m";
-    const std::string GREEN = "\033[32m";
-    const std::string CYAN = "\033[36m";
-    const std::string YELLOW = "\033[33m";
     const std::string BOLD = "\033[1m";
     const std::string DIM = "\033[2m";
+    const std::string GREEN = "\033[32m";
+    const std::string RED = "\033[31m";
+    const std::string CYAN = "\033[36m";
+    const std::string YELLOW = "\033[33m";
 
-    auto printHeader = [](const std::string &title, const std::string &color)
+    auto printSectionHeader = [&](const std::string &title, const std::string &color)
     {
-        std::cout << color << "\n";
-        std::cout << "============================================================\n";
-        std::cout << "  " << title << "\n";
-        std::cout << "============================================================\n";
-        std::cout << "\033[0m";
+        std::cout << BOLD << color << "\n============================================================\n"
+                  << "  " << title << "\n"
+                  << "============================================================\n"
+                  << RESET;
     };
 
-    auto printTableHeader = []
+    auto printColumnHeader = [&]()
     {
-        std::cout << std::left
-                  << std::setw(12) << "PRICE"
-                  << std::setw(12) << "QTY"
-                  << std::setw(12) << "ORDER ID"
-                  << std::setw(12) << "SEQ"
-                  << std::setw(12) << "LEVEL QTY"
-                  << std::endl;
-
-        std::cout << "------------------------------------------------------------\n";
+        std::cout << DIM << std::left << std::setw(14) << "  PRICE" << std::setw(10) << "QTY" << std::setw(12) << "ORDER ID" << std::setw(12) << "SEQ" << std::setw(12) << "LVL QTY" << "\n"
+                  << "  ----------------------------------------------------------\n"
+                  << RESET;
     };
 
-    std::cout << BOLD << CYAN;
-    std::cout << "\n";
-    std::cout << "############################################################\n";
-    std::cout << "#                       ORDER BOOK                         #\n";
-    std::cout << "############################################################\n";
-    std::cout << RESET;
+    std::cout << BOLD << CYAN << "\n############################################################\n"
+              << "#                       ORDER BOOK                         #\n"
+              << "############################################################\n"
+              << RESET;
 
-    printHeader("SELL SIDE / ASKS", RED);
-    printTableHeader();
+    printSectionHeader("SELL SIDE / ASKS", RED);
+    printColumnHeader();
 
     if (SellOrders.empty())
     {
-        std::cout << DIM << "No sell orders.\n"
+        std::cout << DIM << "  No sell orders.\n"
                   << RESET;
     }
     else
     {
-        for (const auto &priceLevel : SellOrders)
+        for (const auto &[price, orders] : SellOrders)
         {
-            std::uint64_t price = priceLevel.first;
-            const std::deque<Order> &orders = priceLevel.second;
+            int levelQty = 0;
 
-            int levelQuantity = 0;
+            for (const Order &o : orders)
+                levelQty += o.quantity;
 
-            for (const Order &order : orders)
+            bool firstAtLevel = true;
+
+            for (const Order &o : orders)
             {
-                levelQuantity += order.quantity;
-            }
+                std::cout << RED << std::left << std::setw(14) << ("  " + FormatPrice(price)) << RESET << std::setw(10) << o.quantity << std::setw(12) << o.id << std::setw(12) << o.sequenceNumber;
 
-            bool firstOrderAtLevel = true;
-
-            for (const Order &order : orders)
-            {
-                std::cout << std::left
-                          << std::setw(12) << FormatPrice(price)
-                          << std::setw(12) << order.quantity
-                          << std::setw(12) << order.id
-                          << std::setw(12) << order.sequenceNumber;
-
-                if (firstOrderAtLevel)
+                if (firstAtLevel)
                 {
-                    std::cout << std::setw(12) << levelQuantity;
-                    firstOrderAtLevel = false;
-                }
-                else
-                {
-                    std::cout << std::setw(12) << "";
+                    std::cout << YELLOW << std::setw(12) << levelQty << RESET;
+                    firstAtLevel = false;
                 }
 
-                std::cout << std::endl;
+                std::cout << "\n";
             }
 
-            std::cout << DIM << "------------------------------------------------------------\n"
+            std::cout << DIM << "  ----------------------------------------------------------\n"
                       << RESET;
         }
     }
 
-    std::cout << YELLOW << "\n";
+    std::cout << "\n";
 
     if (!BuyOrders.empty() && !SellOrders.empty())
     {
@@ -336,76 +328,80 @@ void OrderBook::PrintOrderBook() const
         std::uint64_t bestAsk = SellOrders.begin()->first;
         std::int64_t spread = static_cast<std::int64_t>(bestAsk) - static_cast<std::int64_t>(bestBid);
 
+        std::cout << BOLD;
+
         if (spread < 0)
         {
-            std::cout << "Book crossed. Spread: -" << FormatPrice(static_cast<std::uint64_t>(-spread)) << std::endl;
+            std::cout << RED << "  WARNING: Book crossed. Spread: -" << FormatPrice(static_cast<std::uint64_t>(-spread));
         }
         else
         {
-            std::cout << "Best Bid: " << FormatPrice(bestBid)
-                      << " | Best Ask: " << FormatPrice(bestAsk)
-                      << " | Spread: " << FormatPrice(static_cast<std::uint64_t>(spread))
-                      << std::endl;
+            std::cout << "  Best bid: " << GREEN << FormatPrice(bestBid) << RESET << BOLD << "  |  Best ask: " << RED << FormatPrice(bestAsk) << RESET << BOLD << "  |  Spread: " << YELLOW << FormatPrice(static_cast<std::uint64_t>(spread));
         }
+
+        std::cout << RESET << "\n";
     }
     else
     {
-        std::cout << "Spread unavailable. Both buy and sell sides need orders.\n";
+        std::cout << DIM << "  Spread unavailable - both sides need orders.\n"
+                  << RESET;
     }
 
-    std::cout << RESET;
-
-    printHeader("BUY SIDE / BIDS", GREEN);
-    printTableHeader();
+    printSectionHeader("BUY SIDE / BIDS", GREEN);
+    printColumnHeader();
 
     if (BuyOrders.empty())
     {
-        std::cout << DIM << "No buy orders.\n"
+        std::cout << DIM << "  No buy orders.\n"
                   << RESET;
     }
     else
     {
-        for (const auto &priceLevel : BuyOrders)
+        for (const auto &[price, orders] : BuyOrders)
         {
-            std::uint64_t price = priceLevel.first;
-            const std::deque<Order> &orders = priceLevel.second;
+            int levelQty = 0;
 
-            int levelQuantity = 0;
+            for (const Order &o : orders)
+                levelQty += o.quantity;
 
-            for (const Order &order : orders)
+            bool firstAtLevel = true;
+
+            for (const Order &o : orders)
             {
-                levelQuantity += order.quantity;
-            }
+                std::cout << GREEN << std::left << std::setw(14) << ("  " + FormatPrice(price)) << RESET << std::setw(10) << o.quantity << std::setw(12) << o.id << std::setw(12) << o.sequenceNumber;
 
-            bool firstOrderAtLevel = true;
-
-            for (const Order &order : orders)
-            {
-                std::cout << std::left
-                          << std::setw(12) << FormatPrice(price)
-                          << std::setw(12) << order.quantity
-                          << std::setw(12) << order.id
-                          << std::setw(12) << order.sequenceNumber;
-
-                if (firstOrderAtLevel)
+                if (firstAtLevel)
                 {
-                    std::cout << std::setw(12) << levelQuantity;
-                    firstOrderAtLevel = false;
-                }
-                else
-                {
-                    std::cout << std::setw(12) << "";
+                    std::cout << YELLOW << std::setw(12) << levelQty << RESET;
+                    firstAtLevel = false;
                 }
 
-                std::cout << std::endl;
+                std::cout << "\n";
             }
 
-            std::cout << DIM << "------------------------------------------------------------\n"
+            std::cout << DIM << "  ----------------------------------------------------------\n"
                       << RESET;
         }
     }
 
-    std::cout << BOLD << CYAN;
-    std::cout << "\n############################################################\n";
-    std::cout << RESET << "\n";
+    {
+        int totalBidLevels = static_cast<int>(BuyOrders.size());
+        int totalAskLevels = static_cast<int>(SellOrders.size());
+        int totalBidQty = 0;
+        int totalAskQty = 0;
+
+        for (const auto &[price, orders] : BuyOrders)
+            for (const Order &o : orders)
+                totalBidQty += o.quantity;
+
+        for (const auto &[price, orders] : SellOrders)
+            for (const Order &o : orders)
+                totalAskQty += o.quantity;
+
+        std::cout << DIM << "\n  Bid levels: " << totalBidLevels << "  |  Ask levels: " << totalAskLevels << "  |  Total bid qty: " << totalBidQty << "  |  Total ask qty: " << totalAskQty << "\n"
+                  << RESET;
+    }
+
+    std::cout << BOLD << CYAN << "############################################################\n"
+              << RESET << "\n";
 }

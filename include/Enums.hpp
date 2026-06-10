@@ -1,5 +1,4 @@
-#ifndef ENUMS_HPP
-#define ENUMS_HPP
+#pragma once
 
 enum class OrderSide
 {
@@ -18,5 +17,3 @@ enum class AggressorSide
     Buy,
     Sell
 };
-
-#endif

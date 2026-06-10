@@ -1,22 +1,24 @@
-#ifndef ORDERBOOK_HPP
-#define ORDERBOOK_HPP
+#pragma once
 
 #include <iostream>
-#include <map>
-#include <deque>
-#include <functional>
 #include <cstdint>
+#include <map>
+#include <unordered_map>
+#include <list>
 
 #include "Order.hpp"
+#include "OrderLocation.hpp"
 #include "TradeHistory.hpp"
 
 class OrderBook
 {
-    int NextOrderID;
-    std::uint64_t NextSequenceNumber;
+    std::uint64_t nextOrderId;
+    std::uint64_t nextOrderSequenceNumber;
 
-    std::map<std::uint64_t, std::deque<Order>, std::greater<std::uint64_t>> BuyOrders;
-    std::map<std::uint64_t, std::deque<Order>> SellOrders;
+    std::map<std::uint64_t, std::list<Order>, std::greater<std::uint64_t>> BuyOrders;
+    std::map<std::uint64_t, std::list<Order>> SellOrders;
+
+    std::unordered_map<std::uint64_t, OrderLocation> OrderLocations;
 
     TradeHistory &tradeHistory;
 
@@ -33,5 +35,3 @@ public:
 
     void PrintOrderBook() const;
 };
-
-#endif

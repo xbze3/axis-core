@@ -1,10 +1,9 @@
 #include <iostream>
 #include <cstdlib>
-#include <sstream>
-#include <iomanip>
 #include <string>
 #include <cstdint>
 #include <limits>
+#include <cctype>
 
 #include "OrderBook.hpp"
 #include "TradeHistory.hpp"
@@ -46,7 +45,25 @@ int ReadInt(const std::string &prompt)
     }
 }
 
-std::uint64_t ParsePriceToTicks(const std::string &priceInput)
+bool IsDigitsOnly(const std::string &value)
+{
+    if (value.empty())
+    {
+        return false;
+    }
+
+    for (char ch : value)
+    {
+        if (!std::isdigit(static_cast<unsigned char>(ch)))
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool TryParsePriceToTicks(const std::string &priceInput, std::uint64_t &priceTicks)
 {
     std::string dollarsPart;
     std::string centsPart;
@@ -60,6 +77,11 @@ std::uint64_t ParsePriceToTicks(const std::string &priceInput)
     }
     else
     {
+        if (priceInput.find('.', pointPosition + 1) != std::string::npos)
+        {
+            return false;
+        }
+
         dollarsPart = priceInput.substr(0, pointPosition);
         centsPart = priceInput.substr(pointPosition + 1);
     }
@@ -79,13 +101,25 @@ std::uint64_t ParsePriceToTicks(const std::string &priceInput)
     }
     else if (centsPart.length() > 2)
     {
-        centsPart = centsPart.substr(0, 2);
+        return false;
+    }
+
+    if (!IsDigitsOnly(dollarsPart) || !IsDigitsOnly(centsPart))
+    {
+        return false;
     }
 
     std::uint64_t dollars = std::stoull(dollarsPart);
     std::uint64_t cents = std::stoull(centsPart);
 
-    return (dollars * 100) + cents;
+    if (cents > 99)
+    {
+        return false;
+    }
+
+    priceTicks = (dollars * 100) + cents;
+
+    return true;
 }
 
 int main()
@@ -168,7 +202,13 @@ int main()
                 std::cout << "Enter Limit Price: ";
                 std::cin >> priceInput;
 
-                priceTicks = ParsePriceToTicks(priceInput);
+                if (!TryParsePriceToTicks(priceInput, priceTicks))
+                {
+                    std::cout << "Invalid price input.\n";
+                    Pause();
+                    ClearScreen();
+                    continue;
+                }
             }
 
             ClearScreen();
