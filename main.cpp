@@ -18,7 +18,7 @@
 #define YLW "\033[33m"
 #define MGT "\033[35m"
 
-    void ClearScreen()
+void ClearScreen()
 {
 #ifdef _WIN32
     system("cls");
@@ -162,7 +162,8 @@ void PrintBanner()
     std::cout << "\n";
     std::cout << BOLD CYN "  +--------------------------------------------------+\n" RST;
     std::cout << BOLD CYN "  |                                                  |\n" RST;
-    std::cout << BOLD CYN "  |              GSE EXCHANGE SIMULATOR              |\n" RST;
+    std::cout << BOLD CYN "  |                  AXIS EXCHANGE                   |\n" RST;
+    std::cout << BOLD CYN "  |             C++ Exchange Simulator               |\n" RST;
     std::cout << BOLD CYN "  |                                                  |\n" RST;
     std::cout << BOLD CYN "  +--------------------------------------------------+\n" RST;
     std::cout << "\n";
@@ -192,14 +193,14 @@ void PrintError(const std::string &msg)
     std::cout << "\n" BOLD RED "  [ERROR] " RST << msg << "\n";
 }
 
-void PrintOrderSubmitted(const std::string &symbol, OrderSide side, OrderType type, int quantity, std::uint64_t priceTicks)
+void PrintOrderAccepted(const std::string &symbol, OrderSide side, OrderType type, int quantity, std::uint64_t priceTicks)
 {
     const std::string sideStr = (side == OrderSide::Buy) ? GRN "BUY" RST : RED "SELL" RST;
     const std::string typeStr = (type == OrderType::Limit) ? YLW "LIMIT" RST : MGT "MARKET" RST;
 
     std::cout << "\n";
     std::cout << BOLD CYN "  +--------------------------------------------------+\n" RST;
-    std::cout << BOLD CYN "  |              ORDER SUBMITTED                     |\n" RST;
+    std::cout << BOLD CYN "  |               ORDER ACCEPTED                     |\n" RST;
     std::cout << BOLD CYN "  +--------------------------------------------------+\n" RST;
     std::cout << "  " DIM "Symbol   : " RST BOLD << symbol << RST "\n";
     std::cout << "  " DIM "Side     : " RST BOLD << sideStr << "\n";
@@ -336,11 +337,15 @@ int main()
 
             ClearScreen();
             PrintBanner();
-            PrintOrderSubmitted(symbol, side, type, quantity, priceTicks);
 
-            engine.SubmitOrder(symbol, side, type, priceTicks, quantity);
-            engine.PrintBook(symbol);
-            engine.PrintTradeHistory(symbol);
+            bool orderAccepted = engine.SubmitOrder(symbol, side, type, priceTicks, quantity);
+
+            if (orderAccepted)
+            {
+                PrintOrderAccepted(symbol, side, type, quantity, priceTicks);
+                engine.PrintBook(symbol);
+                engine.PrintTradeHistory(symbol);
+            }
 
             Pause();
             ClearScreen();
@@ -381,9 +386,13 @@ int main()
             PrintBanner();
             PrintCancelHeader(symbol, orderId);
 
-            engine.CancelOrder(symbol, orderId);
-            engine.PrintBook(symbol);
-            engine.PrintTradeHistory(symbol);
+            bool cancelAccepted = engine.CancelOrder(symbol, orderId);
+
+            if (cancelAccepted)
+            {
+                engine.PrintBook(symbol);
+                engine.PrintTradeHistory(symbol);
+            }
 
             Pause();
             ClearScreen();
@@ -417,4 +426,3 @@ int main()
 
     return 0;
 }
-
