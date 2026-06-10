@@ -12,6 +12,8 @@
 class ExchangeEngine
 {
 private:
+    TradeHistory tradeHistory;
+
     SymbolRegistry registry;
     std::map<InstrumentId, OrderBook> OrderBooks;
 
