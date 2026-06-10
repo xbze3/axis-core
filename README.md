@@ -1,14 +1,14 @@
 # C++ OrderBook Engine
 
-A learning-focused C++ project that simulates the core behavior of a trading system’s order book and matching engine.
+A C++ order book and matching engine that simulates the core behavior of a simple trading system.
 
-I built this project because I have an interest in trading systems and wanted to understand how orders are stored, matched, partially filled, and displayed inside a market-style engine. The goal is not to build a production exchange, but to learn the underlying mechanics behind limit orders, market orders, price-time priority, and bid/ask book structure.
+I built this project to better understand how trading systems store orders, match buyers and sellers, handle partial fills, and maintain bid/ask book state. The goal is not to build a real exchange, but to model the main mechanics behind limit orders, market orders, price-time priority, trade recording, and order lookup.
 
 ---
 
 ## Overview
 
-This project implements a basic order book using C++ standard library data structures.
+This project implements a basic order book using C++ standard library containers.
 
 The order book supports:
 
@@ -16,12 +16,14 @@ The order book supports:
 - Limit orders
 - Market orders
 - Price-time priority
+- Order lookup design
 - Partial fills
 - Full fills
 - Resting orders
+- Order location tracking for resting orders
 - Best bid and best ask display
 - Spread calculation
-- Formatted terminal output
+- Terminal output
 - Executed trade recording
 - Shared trade history
 - Individual trade printing
@@ -44,8 +46,9 @@ This project helped me explore questions such as:
 - What happens when an order is only partially filled?
 - How are market orders different from limit orders?
 - How can price-time priority be represented with C++ containers?
+- How can resting orders be tracked by order ID?
 - How can integer price ticks be used for safer price comparison and display?
-- How can a terminal interface guide users through order creation?
+- How can a simple terminal interface be used to test the engine?
 
 ---
 
@@ -90,6 +93,18 @@ The buy side is sorted with the highest price first, because the best buyer is t
 
 The sell side is sorted with the lowest price first, because the best seller is the one willing to sell for the least.
 
+### Order Location
+
+`OrderLocation` stores where a resting order lives inside the book.
+
+It keeps track of:
+
+- Order side
+- Price ticks
+- An iterator pointing to the order inside its price level
+
+This allows the engine to track resting orders by order ID and sets up the project for order cancellation.
+
 ### Matching Engine
 
 The matching logic checks whether an incoming order can trade against existing orders on the opposite side of the book.
@@ -122,16 +137,17 @@ The trade history stores all executed trades in one shared location.
 
 The `OrderBook` records trades into a shared `TradeHistory` object whenever a match occurs. This allows executed trades to be displayed separately from the current resting order book.
 
-This separation keeps the design clear:
+The main pieces are separated like this:
 
 - `Order` represents a request to buy or sell.
 - `OrderBook` stores active resting orders and performs matching.
+- `OrderLocation` tracks where resting orders live inside the book.
 - `Trade` represents one executed match.
 - `TradeHistory` stores and displays all executed trades.
 
 ### Command-Line Interface
 
-The project includes an interactive command-line interface in `main.cpp`.
+The project includes a small command-line interface in `main.cpp`.
 
 The interface allows a user to:
 
@@ -147,35 +163,45 @@ When placing an order, the user is guided through:
 3. Entering quantity
 4. Entering price if the order is a limit order
 
-After an order is submitted, the screen is cleared and the updated order book and trade history are printed.
+After an order is submitted, the updated order book and trade history are printed.
 
 ---
 
 ## Data Structures Used
 
-The project uses `std::map` and `std::deque` to model the order book.
+The project uses ordered maps for price levels, lists for FIFO order queues, and an unordered map for order lookup.
 
 ### Buy Orders
 
 ```cpp
-std::map<std::uint64_t, std::deque<Order>, std::greater<std::uint64_t>> BuyOrders;
+std::map<std::uint64_t, std::list<Order>, std::greater<std::uint64_t>> BuyOrders;
 ```
 
-This stores buy orders grouped by price ticks, with the highest price first. These ticks are formatted as dollar-style prices when printed.
+This stores buy orders grouped by price ticks, with the highest price first. Each price level contains a list of resting orders in arrival order.
 
 ### Sell Orders
 
 ```cpp
-std::map<std::uint64_t, std::deque<Order>> SellOrders;
+std::map<std::uint64_t, std::list<Order>> SellOrders;
 ```
 
-This stores sell orders grouped by price ticks, with the lowest price first. These ticks are formatted as dollar-style prices when printed.
+This stores sell orders grouped by price ticks, with the lowest price first. Each price level contains a list of resting orders in arrival order.
 
-### Why `std::deque`
+### Order Locations
 
-Each price level may contain multiple orders. A `std::deque` is used to preserve FIFO ordering at the same price level.
+```cpp
+std::unordered_map<std::uint64_t, OrderLocation> OrderLocations;
+```
 
-That means older orders at the same price are matched before newer orders.
+This maps an order ID to its current location in the book.
+
+Each `OrderLocation` stores the side, price level, and iterator for a resting order. This avoids searching the full book when locating an order by ID.
+
+### Why `std::list`
+
+Each price level may contain multiple orders. A `std::list` preserves FIFO ordering and gives stable iterators.
+
+That matters because `OrderLocations` stores an iterator to each resting order. When a resting order is filled or cancelled, the engine can remove it from the correct price level without scanning the entire book.
 
 ### Trade History
 
@@ -288,7 +314,7 @@ include/Utils.hpp
 src/Utils.cpp
 ```
 
-This avoids redefining helper functions in multiple `.cpp` files and allows `main.cpp`, `OrderBook.cpp`, and other components to use the same `FormatPrice` logic.
+This keeps formatting logic in one place and allows `main.cpp`, `OrderBook.cpp`, `Order.cpp`, and `Trade.cpp` to share the same price and timestamp helpers.
 
 ---
 
@@ -376,6 +402,7 @@ cpp-orderbook-engine/
 │   ├── Enums.hpp
 │   ├── Order.hpp
 │   ├── OrderBook.hpp
+│   ├── OrderLocation.hpp
 │   ├── Trade.hpp
 │   ├── TradeHistory.hpp
 │   └── Utils.hpp
@@ -383,6 +410,7 @@ cpp-orderbook-engine/
 ├── src/
 │   ├── Order.cpp
 │   ├── OrderBook.cpp
+│   ├── OrderLocation.cpp
 │   ├── Trade.cpp
 │   ├── TradeHistory.cpp
 │   └── Utils.cpp
@@ -402,7 +430,7 @@ cpp-orderbook-engine/
 From the project root, compile with:
 
 ```bash
-g++ main.cpp src/Order.cpp src/OrderBook.cpp src/Trade.cpp src/TradeHistory.cpp src/Utils.cpp -I include -o main
+g++ main.cpp src/Order.cpp src/OrderBook.cpp src/OrderLocation.cpp src/Trade.cpp src/TradeHistory.cpp src/Utils.cpp -I include -o main
 ```
 
 Run with:
@@ -424,7 +452,7 @@ On Windows PowerShell:
 If using `tests/TestLogic.cpp`, compile with:
 
 ```bash
-g++ tests/TestLogic.cpp src/Order.cpp src/OrderBook.cpp src/Trade.cpp src/TradeHistory.cpp src/Utils.cpp -I include -o TestLogic
+g++ tests/TestLogic.cpp src/Order.cpp src/OrderBook.cpp src/OrderLocation.cpp src/Trade.cpp src/TradeHistory.cpp src/Utils.cpp -I include -o TestLogic
 ```
 
 Run with:
@@ -449,6 +477,7 @@ On Windows PowerShell:
 - Partial fill handling
 - Full fill handling
 - Price-level cleanup after orders are filled
+- Resting order lookup using `OrderLocation`
 - Remaining limit orders rest in the book
 - Remaining market order quantity is cancelled
 - Formatted terminal order book display
@@ -461,24 +490,24 @@ On Windows PowerShell:
 - Individual trade printing
 - Full trade history printing
 - Separated order handling logic for market buys, market sells, limit buys, and limit sells
-- Interactive CLI menu for placing orders and viewing book/history state
+- Small CLI for testing order entry and viewing book/history state
 
 ---
 
 ## Future Improvements
 
-Possible next steps:
+Next steps:
 
 - Add order cancellation by order ID
-- Add order lookup using a hash map
-- Add unit tests
+- Expand the test cases
 - Add support for modifying orders
 - Add CSV export for order and trade history
 - Add performance benchmarks
 - Add support for configurable tick sizes
 - Improve crossed-book and negative spread display for debugging
-- Add stronger validation for malformed price input
+- Improve CLI validation and error messages
 - Add support for multiple instruments/order books sharing one trade history
+- Add an API/WebSocket layer for external order submission and live updates
 
 ---
 
@@ -489,15 +518,17 @@ This project helped me practice:
 - C++ classes and headers
 - Enum usage
 - `std::map`
-- `std::deque`
+- `std::unordered_map`
+- `std::list`
 - `std::vector`
 - References
-- Iterators
+- Stable iterators
 - Integer-based price representation
 - String-to-integer price parsing
 - Shared utility functions
 - Shared formatting utilities
 - Price-time priority
+- Order lookup design
 - Matching engine logic
 - Partial fills
 - Trade history design
@@ -506,7 +537,7 @@ This project helped me practice:
 - Terminal formatting
 - Multi-file C++ project structure
 - Breaking large logic into smaller helper methods
-- Building a simple command-line interface
+- Building a simple command-line test interface
 
 ---
 
