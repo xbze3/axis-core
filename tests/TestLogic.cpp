@@ -68,5 +68,14 @@ int main()
     book.PrintOrderBook();
     history.PrintTradeHistory();
 
+    std::cout << "\n========== TEST 9: CANCEL RESTING ORDERS ==========\n";
+
+    book.CancelOrder(1);
+    book.CancelOrder(2);
+    book.CancelOrder(999);
+
+    book.PrintOrderBook();
+    history.PrintTradeHistory();
+
     return 0;
 }

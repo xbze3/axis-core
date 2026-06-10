@@ -253,6 +253,64 @@ void OrderBook::AddOrder(OrderSide side, OrderType type, std::uint64_t priceTick
     nextOrderSequenceNumber++;
 }
 
+void OrderBook::CancelOrder(std::uint64_t id)
+{
+    auto Order = OrderLocations.find(id);
+
+    if (Order == OrderLocations.end())
+    {
+        std::cout << "CANCEL REJECTED: Order " << id << " was not found." << std::endl;
+        return;
+    }
+
+    OrderLocation &OrderData = Order->second;
+
+    if (OrderData.side == OrderSide::Buy)
+    {
+        auto OrderLevel = BuyOrders.find(OrderData.priceTicks);
+
+        if (OrderLevel != BuyOrders.end())
+        {
+            OrderLevel->second.erase(OrderData.orderIterator);
+
+            std::cout << "CANCELLED: Buy Order " << id << " | Price: " << FormatPrice(OrderData.priceTicks) << std::endl;
+
+            if (OrderLevel->second.empty())
+            {
+                BuyOrders.erase(OrderLevel);
+                std::cout << "PRICE LEVEL REMOVED: Buy level " << FormatPrice(OrderData.priceTicks) << " is now empty." << std::endl;
+            }
+        }
+        else
+        {
+            std::cout << "WARNING: Buy Order " << id << " was found in OrderLocations, but price level " << FormatPrice(OrderData.priceTicks) << " was missing. Cleaning up stale order location." << std::endl;
+        }
+    }
+    else
+    {
+        auto OrderLevel = SellOrders.find(OrderData.priceTicks);
+
+        if (OrderLevel != SellOrders.end())
+        {
+            OrderLevel->second.erase(OrderData.orderIterator);
+
+            std::cout << "CANCELLED: Sell Order " << id << " | Price: " << FormatPrice(OrderData.priceTicks) << std::endl;
+
+            if (OrderLevel->second.empty())
+            {
+                SellOrders.erase(OrderLevel);
+                std::cout << "PRICE LEVEL REMOVED: Sell level " << FormatPrice(OrderData.priceTicks) << " is now empty." << std::endl;
+            }
+        }
+        else
+        {
+            std::cout << "WARNING: Sell Order " << id << " was found in OrderLocations, but price level " << FormatPrice(OrderData.priceTicks) << " was missing. Cleaning up stale order location." << std::endl;
+        }
+    }
+
+    OrderLocations.erase(id);
+}
+
 void OrderBook::PrintOrderBook() const
 {
     const std::string RESET = "\033[0m";

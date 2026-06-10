@@ -1,80 +1,72 @@
 # C++ OrderBook Engine
 
-A C++ order book and matching engine that simulates the core behavior of a simple trading system.
+A small C++ order book and matching engine that models the basic flow of a trading system.
 
-I built this project to better understand how trading systems store orders, match buyers and sellers, handle partial fills, and maintain bid/ask book state. The goal is not to build a real exchange, but to model the main mechanics behind limit orders, market orders, price-time priority, trade recording, and order lookup.
+I built this project to understand how orders are stored, matched, filled, cancelled, and displayed. It is not meant to be a production exchange. It is a learning project focused on price-time priority, market and limit orders, trade recording, and order lookup.
 
 ---
 
-## Overview
-
-This project implements a basic order book using C++ standard library containers.
-
-The order book supports:
+## Features
 
 - Buy and sell orders
-- Limit orders
-- Market orders
+- Limit and market orders
 - Price-time priority
-- Order lookup design
-- Partial fills
-- Full fills
-- Resting orders
-- Order location tracking for resting orders
-- Best bid and best ask display
-- Spread calculation
-- Terminal output
-- Executed trade recording
-- Shared trade history
-- Individual trade printing
-- Trade history display
-- Integer-based price ticks
-- Interactive command-line order entry
+- Partial and full fills
+- Resting order storage
+- Order cancellation by order ID
+- Price-level cleanup after fills and cancellations
+- Order lookup using saved order locations
+- Best bid, best ask, and spread display
+- Trade recording through a shared trade history
+- Integer-based price ticks using `std::uint64_t`
 - User-friendly price input such as `100.50`
-- Basic validation for invalid price and quantity values
+- Formatted terminal output
+- Interactive command-line interface
 
 ---
 
-## Why This Project
+## How It Works
 
-Trading systems are a great way to practice systems thinking, data structures, and C++ fundamentals. Even a simple matching engine requires careful handling of ordering, priority, quantity updates, and edge cases.
+The project is built around a few main parts:
 
-This project helped me explore questions such as:
+- `Order` represents a buy or sell request.
+- `OrderBook` stores active orders and runs the matching logic.
+- `OrderLocation` tracks where a resting order lives in the book.
+- `Trade` represents one completed match.
+- `TradeHistory` stores and prints executed trades.
 
-- How does an order book store buy and sell orders?
-- How does a matching engine decide which orders trade first?
-- What happens when an order is only partially filled?
-- How are market orders different from limit orders?
-- How can price-time priority be represented with C++ containers?
-- How can resting orders be tracked by order ID?
-- How can integer price ticks be used for safer price comparison and display?
-- How can a simple terminal interface be used to test the engine?
+Buy orders are grouped by price with the highest price first. Sell orders are grouped by price with the lowest price first. Inside each price level, orders are stored in arrival order, so earlier orders at the same price get priority.
 
 ---
 
-## Core Concepts
+## Orders
 
-### Order
-
-An order represents a request to buy or sell a quantity at a certain price.
-
-Each order stores information such as:
+Each order stores:
 
 - Order ID
-- Order side: Buy or Sell
-- Order type: Market or Limit
+- Side: buy or sell
+- Type: market or limit
 - Price ticks
 - Quantity
 - Sequence number
 - Creation timestamp
 
-### Price Ticks
+Limit orders may rest in the book if they are not fully matched. Market orders try to fill immediately against the opposite side of the book. Any unfilled market quantity is cancelled.
 
-Prices are stored internally as integer ticks using `std::uint64_t`.
+---
 
-Internally, the order book compares integer values like `10050` and `10200`. When prices are shown to the user, shared formatting helpers display them as dollar-style values such as `$100.50` and `$102.00`.
+## Price Ticks
 
-The interactive CLI accepts user-friendly price input such as:
+Prices are stored internally as integer ticks instead of floating-point values.
+
+For example:
+
+```text
+10050 ticks -> $100.50
+9975 ticks  -> $99.75
+```
+
+The CLI accepts prices like:
 
 ```text
 100
@@ -83,93 +75,18 @@ The interactive CLI accepts user-friendly price input such as:
 99.75
 ```
 
-and converts those values into price ticks before sending them to the order book.
+and converts them into ticks before sending them to the order book. This keeps matching simple and avoids floating-point comparison issues.
 
-### Order Book
+Price and timestamp formatting are shared through:
 
-The order book stores active buy and sell orders.
-
-The buy side is sorted with the highest price first, because the best buyer is the one willing to pay the most.
-
-The sell side is sorted with the lowest price first, because the best seller is the one willing to sell for the least.
-
-### Order Location
-
-`OrderLocation` stores where a resting order lives inside the book.
-
-It keeps track of:
-
-- Order side
-- Price ticks
-- An iterator pointing to the order inside its price level
-
-This allows the engine to track resting orders by order ID and sets up the project for order cancellation.
-
-### Matching Engine
-
-The matching logic checks whether an incoming order can trade against existing orders on the opposite side of the book.
-
-A buy limit order can match with sell orders at or below its limit price.
-
-A sell limit order can match with buy orders at or above its limit price.
-
-Market orders immediately consume available liquidity from the opposite side of the book. Any remaining unfilled quantity is cancelled.
-
-### Trade
-
-A trade represents one completed match between a buy order and a sell order.
-
-Each trade stores information such as:
-
-- Trade ID
-- Buy order ID
-- Sell order ID
-- Execution price
-- Executed quantity
-- Aggressor side
-- Execution timestamp
-
-A single incoming order can create multiple trades if it matches against several resting orders across one or more price levels.
-
-### Trade History
-
-The trade history stores all executed trades in one shared location.
-
-The `OrderBook` records trades into a shared `TradeHistory` object whenever a match occurs. This allows executed trades to be displayed separately from the current resting order book.
-
-The main pieces are separated like this:
-
-- `Order` represents a request to buy or sell.
-- `OrderBook` stores active resting orders and performs matching.
-- `OrderLocation` tracks where resting orders live inside the book.
-- `Trade` represents one executed match.
-- `TradeHistory` stores and displays all executed trades.
-
-### Command-Line Interface
-
-The project includes a small command-line interface in `main.cpp`.
-
-The interface allows a user to:
-
-- Place an order
-- View the current order book
-- View trade history
-- Exit the program
-
-When placing an order, the user is guided through:
-
-1. Selecting the order side: Buy or Sell
-2. Selecting the order type: Limit or Market
-3. Entering quantity
-4. Entering price if the order is a limit order
-
-After an order is submitted, the updated order book and trade history are printed.
+```text
+include/Utils.hpp
+src/Utils.cpp
+```
 
 ---
 
-## Data Structures Used
-
-The project uses ordered maps for price levels, lists for FIFO order queues, and an unordered map for order lookup.
+## Data Structures
 
 ### Buy Orders
 
@@ -177,7 +94,7 @@ The project uses ordered maps for price levels, lists for FIFO order queues, and
 std::map<std::uint64_t, std::list<Order>, std::greater<std::uint64_t>> BuyOrders;
 ```
 
-This stores buy orders grouped by price ticks, with the highest price first. Each price level contains a list of resting orders in arrival order.
+Buy orders are grouped by price, with the best bid first.
 
 ### Sell Orders
 
@@ -185,7 +102,7 @@ This stores buy orders grouped by price ticks, with the highest price first. Eac
 std::map<std::uint64_t, std::list<Order>> SellOrders;
 ```
 
-This stores sell orders grouped by price ticks, with the lowest price first. Each price level contains a list of resting orders in arrival order.
+Sell orders are grouped by price, with the best ask first.
 
 ### Order Locations
 
@@ -195,126 +112,83 @@ std::unordered_map<std::uint64_t, OrderLocation> OrderLocations;
 
 This maps an order ID to its current location in the book.
 
-Each `OrderLocation` stores the side, price level, and iterator for a resting order. This avoids searching the full book when locating an order by ID.
-
-### Why `std::list`
-
-Each price level may contain multiple orders. A `std::list` preserves FIFO ordering and gives stable iterators.
-
-That matters because `OrderLocations` stores an iterator to each resting order. When a resting order is filled or cancelled, the engine can remove it from the correct price level without scanning the entire book.
+`OrderLocation` stores the side, price level, and list iterator for a resting order. This allows the engine to cancel an order directly without scanning every price level.
 
 ### Trade History
-
-Executed trades are stored in a vector:
 
 ```cpp
 std::vector<Trade> trades;
 ```
 
-A vector works well for trade history because trades are recorded as a growing list. Each new trade is appended to the end of the history.
-
-The `TradeHistory` component manages trade IDs, creates new trade records, stores them, and prints the full trade history.
+Trades are stored in a vector because each new trade is simply appended to the history.
 
 ---
 
 ## Matching Behavior
 
-### Limit Buy Example
+### Limit Buy
 
-If a buy limit order is placed at `10200` ticks, it can match with sell orders at:
+A buy limit order matches with the lowest available sell prices first, as long as the sell price is less than or equal to the buy limit.
 
-```text
-10125
-10200
-```
+Example: a buy limit at `$102.00` can match with sells at `$101.25` and `$102.00`, but not above `$102.00`.
 
-but not with sell orders above `10200`.
+### Limit Sell
 
-If one tick represents one cent, this means a buy limit at `102.00` can match with sells at `101.25` and `102.00`, but not above `102.00`.
+A sell limit order matches with the highest available buy prices first, as long as the buy price is greater than or equal to the sell limit.
 
-### Limit Sell Example
+Example: a sell limit at `$100.50` can match with buys at `$100.50`, `$101.00`, and `$102.00`, but not below `$100.50`.
 
-If a sell limit order is placed at `10050` ticks, it can match with buy orders at:
+### Market Orders
 
-```text
-10050
-10100
-10200
-```
+Market orders consume the best available orders on the opposite side until they are filled or the opposite side is empty.
 
-but not with buy orders below `10050`.
-
-If one tick represents one cent, this means a sell limit at `100.50` can match with buys at `100.50`, `101.00`, and `102.00`, but not below `100.50`.
-
-### Market Buy Example
-
-A market buy order consumes the best available sell orders until either:
-
-- the market buy is fully filled, or
-- there are no more sell orders available
-
-Any remaining quantity is cancelled.
-
-### Market Sell Example
-
-A market sell order consumes the best available buy orders until either:
-
-- the market sell is fully filled, or
-- there are no more buy orders available
-
-Any remaining quantity is cancelled.
+Any remaining market quantity is cancelled.
 
 ---
 
-## Order Handling Structure
+## Order Cancellation
 
-The order book matching logic is split into helper methods for clarity:
+Resting orders can be cancelled by order ID.
+
+When a limit order is added to the book, its location is saved in `OrderLocations`. When `CancelOrder` is called, the engine uses the saved side, price level, and iterator to remove the order from the correct list.
+
+If the price level becomes empty after the cancellation, that price level is removed from the book. The order ID is also removed from `OrderLocations`.
+
+The cancellation logic uses `find()` instead of `operator[]` when looking up price levels, so a missing level does not accidentally create a new empty level.
+
+---
+
+## OrderBook Methods
+
+The matching and cancellation logic is split into smaller methods:
 
 - `HandleMarketBuy`
 - `HandleMarketSell`
 - `HandleLimitBuy`
 - `HandleLimitSell`
+- `CancelOrder`
 
-The `AddOrder` method handles validation, creates the incoming order, and routes it to the correct handler based on side and type.
-
-This keeps the high-level flow cleaner while keeping matching behavior inside the `OrderBook`.
+`AddOrder` handles validation, creates the incoming order, and sends it to the correct handler based on side and order type.
 
 ---
 
-## Price Input and Display
+## Command-Line Interface
 
-The CLI reads limit order prices as strings, then converts them into integer price ticks for internal matching.
+The project includes a simple terminal interface in `main.cpp`.
 
-Examples:
-
-```text
-Input: 100      -> 10000 ticks
-Input: 100.5    -> 10050 ticks
-Input: 100.50   -> 10050 ticks
-Input: 99.75    -> 9975 ticks
-```
-
-Prices are formatted back into display form with a dollar sign:
+The menu allows you to:
 
 ```text
-10050 ticks -> $100.50
-9975 ticks  -> $99.75
+1. Place Order
+2. View Order Book
+3. View Trade History
+4. Cancel Order
+5. Exit
 ```
 
-This keeps internal matching based on ticks while allowing submitted orders, trade messages, order book output, best bid, best ask, and spread values to display as familiar price values.
+When placing an order, the CLI asks for the side, type, quantity, and price if it is a limit order.
 
-Order book rows, trade messages, trade history entries, and spread values are displayed using the same formatting helper.
-
-### Shared Utility Functions
-
-Shared formatting logic is kept in a utility component:
-
-```text
-include/Utils.hpp
-src/Utils.cpp
-```
-
-This keeps formatting logic in one place and allows `main.cpp`, `OrderBook.cpp`, `Order.cpp`, and `Trade.cpp` to share the same price and timestamp helpers.
+When cancelling an order, the CLI asks for the order ID and then prints the updated order book and trade history.
 
 ---
 
@@ -325,7 +199,8 @@ This keeps formatting logic in one place and allows `main.cpp`, `OrderBook.cpp`,
 1. Place Order
 2. View Order Book
 3. View Trade History
-4. Exit
+4. Cancel Order
+5. Exit
 ======================================================
 Select an option: 1
 
@@ -343,7 +218,15 @@ Enter Quantity: 10
 Enter Limit Price: 100.50
 ```
 
-After submission, the order book and trade history are displayed.
+Example cancellation:
+
+```text
+Select an option: 4
+Order ID > 2
+
+CANCELLED: Buy Order 2 | Price: $99.75
+PRICE LEVEL REMOVED: Buy level $99.75 is now empty.
+```
 
 ---
 
@@ -377,18 +260,6 @@ $100.50     10          1           1           10
 ------------------------------------------------------------
 $99.75      5           2           2           5
 ------------------------------------------------------------
-
-====================== TRADE HISTORY ======================
-Total Trades Executed: 3
------------------------------------------------------------
-=============== Trade: 1 ===============
-Buy Order ID: 5
-Sell Order ID: 3
-Trade Price: $101.25
-Trade Quantity: 4
-Aggressor Side: Buy
-Executed At: 2026-05-31 20:59:54
-========================================
 ```
 
 ---
@@ -425,15 +296,15 @@ cpp-orderbook-engine/
 
 ---
 
-## Building the Project
+## Build and Run
 
-From the project root, compile with:
+From the project root:
 
 ```bash
 g++ main.cpp src/Order.cpp src/OrderBook.cpp src/OrderLocation.cpp src/Trade.cpp src/TradeHistory.cpp src/Utils.cpp -I include -o main
 ```
 
-Run with:
+Run:
 
 ```bash
 ./main
@@ -447,15 +318,15 @@ On Windows PowerShell:
 
 ---
 
-## Running the Test File
+## Run the Test File
 
-If using `tests/TestLogic.cpp`, compile with:
+Compile:
 
 ```bash
 g++ tests/TestLogic.cpp src/Order.cpp src/OrderBook.cpp src/OrderLocation.cpp src/Trade.cpp src/TradeHistory.cpp src/Utils.cpp -I include -o TestLogic
 ```
 
-Run with:
+Run:
 
 ```bash
 ./TestLogic
@@ -469,78 +340,38 @@ On Windows PowerShell:
 
 ---
 
-## Current Features
-
-- Limit order validation
-- Market order handling
-- Buy-side and sell-side matching
-- Partial fill handling
-- Full fill handling
-- Price-level cleanup after orders are filled
-- Resting order lookup using `OrderLocation`
-- Remaining limit orders rest in the book
-- Remaining market order quantity is cancelled
-- Formatted terminal order book display
-- Best bid, best ask, and spread display
-- Integer-based price ticks using `std::uint64_t`
-- Decimal-style user price input converted into price ticks
-- Dollar-style price formatting for submitted orders, order book output, trade messages, trade history, and spread display
-- Trade recording through a shared `TradeHistory` object
-- Trade records with buy order ID, sell order ID, execution price, quantity, aggressor side, and timestamp
-- Individual trade printing
-- Full trade history printing
-- Separated order handling logic for market buys, market sells, limit buys, and limit sells
-- Small CLI for testing order entry and viewing book/history state
-
----
-
-## Future Improvements
-
-Next steps:
-
-- Add order cancellation by order ID
-- Expand the test cases
-- Add support for modifying orders
-- Add CSV export for order and trade history
-- Add performance benchmarks
-- Add support for configurable tick sizes
-- Improve crossed-book and negative spread display for debugging
-- Improve CLI validation and error messages
-- Add support for multiple instruments/order books sharing one trade history
-- Add an API/WebSocket layer for external order submission and live updates
-
----
-
 ## What I Learned
 
 This project helped me practice:
 
 - C++ classes and headers
-- Enum usage
-- `std::map`
-- `std::unordered_map`
-- `std::list`
-- `std::vector`
-- References
-- Stable iterators
-- Integer-based price representation
-- String-to-integer price parsing
-- Shared utility functions
-- Shared formatting utilities
+- `std::map`, `std::unordered_map`, `std::list`, and `std::vector`
+- References and stable iterators
 - Price-time priority
-- Order lookup design
+- Integer-based price handling
 - Matching engine logic
 - Partial fills
+- Order cancellation
 - Trade history design
-- Shared object references
-- Constructor initializer lists
-- Terminal formatting
 - Multi-file C++ project structure
-- Breaking large logic into smaller helper methods
-- Building a simple command-line test interface
+- Simple terminal UI design
+
+---
+
+## Future Improvements
+
+Some possible next steps:
+
+- Add more tests for cancellation and edge cases
+- Add order modification
+- Add CSV export for orders and trades
+- Add performance benchmarks
+- Support configurable tick sizes
+- Support multiple instruments
+- Add an API or WebSocket layer for external order submission
 
 ---
 
 ## Disclaimer
 
-This project is for educational purposes only. It is a simplified simulation of an order book and matching engine, not a production trading system or financial exchange.
+This project is for educational purposes only. It is a simplified order book and matching engine, not a production trading system.

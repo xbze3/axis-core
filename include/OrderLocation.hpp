@@ -8,10 +8,10 @@
 
 class OrderLocation
 {
+
+public:
     OrderSide side;
     std::uint64_t priceTicks;
     std::list<Order>::iterator orderIterator;
-
-public:
     OrderLocation(OrderSide side, std::uint64_t priceTicks, std::list<Order>::iterator orderIterator);
 };
