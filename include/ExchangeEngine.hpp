@@ -12,7 +12,7 @@
 class ExchangeEngine
 {
 private:
-    TradeHistory tradeHistory;
+    TradeHistory exchangeTradeHistory;
 
     SymbolRegistry registry;
     std::map<InstrumentId, OrderBook> OrderBooks;
@@ -31,6 +31,8 @@ public:
     OrderBook *GetBook(const std::string &symbol);
 
     void PrintBook(const std::string &symbol) const;
-    void PrintTradeHistory(const std::string &symbol) const;
+    void PrintBookTradeHistory(const std::string &symbol) const;
     void PrintAllBooks() const;
+
+    void PrintExchangeTradeHistory() const;
 };

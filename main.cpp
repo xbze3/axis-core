@@ -174,10 +174,11 @@ void PrintMenu()
     std::cout << BOLD "  +--------------------------------------------------+\n" RST;
     std::cout << BOLD "  |  " GRN "1" RST BOLD "  Place Order                                  |\n" RST;
     std::cout << BOLD "  |  " CYN "2" RST BOLD "  View Order Book                              |\n" RST;
-    std::cout << BOLD "  |  " YLW "3" RST BOLD "  View Trade History                           |\n" RST;
+    std::cout << BOLD "  |  " YLW "3" RST BOLD "  View Book Trade History                      |\n" RST;
     std::cout << BOLD "  |  " MGT "4" RST BOLD "  Cancel Order                                 |\n" RST;
     std::cout << BOLD "  |  " CYN "5" RST BOLD "  View All Books                               |\n" RST;
-    std::cout << BOLD "  |  " RED "6" RST BOLD "  Exit                                         |\n" RST;
+    std::cout << BOLD "  |  " YLW "6" RST BOLD "  View Exchange Trade History                  |\n" RST;
+    std::cout << BOLD "  |  " RED "7" RST BOLD "  Exit                                         |\n" RST;
     std::cout << BOLD "  +--------------------------------------------------+\n" RST;
     std::cout << "\n";
 }
@@ -193,34 +194,11 @@ void PrintError(const std::string &msg)
     std::cout << "\n" BOLD RED "  [ERROR] " RST << msg << "\n";
 }
 
-void PrintOrderAccepted(const std::string &symbol, OrderSide side, OrderType type, int quantity, std::uint64_t priceTicks)
-{
-    const std::string sideStr = (side == OrderSide::Buy) ? GRN "BUY" RST : RED "SELL" RST;
-    const std::string typeStr = (type == OrderType::Limit) ? YLW "LIMIT" RST : MGT "MARKET" RST;
-
-    std::cout << "\n";
-    std::cout << BOLD CYN "  +--------------------------------------------------+\n" RST;
-    std::cout << BOLD CYN "  |               ORDER ACCEPTED                     |\n" RST;
-    std::cout << BOLD CYN "  +--------------------------------------------------+\n" RST;
-    std::cout << "  " DIM "Symbol   : " RST BOLD << symbol << RST "\n";
-    std::cout << "  " DIM "Side     : " RST BOLD << sideStr << "\n";
-    std::cout << "  " DIM "Type     : " RST BOLD << typeStr << "\n";
-    std::cout << "  " DIM "Quantity : " RST BOLD << quantity << RST "\n";
-
-    if (type == OrderType::Limit)
-    {
-        std::cout << "  " DIM "Price    : " RST BOLD YLW << FormatPrice(priceTicks) << RST "\n";
-    }
-
-    std::cout << BOLD CYN "  +--------------------------------------------------+\n" RST;
-    std::cout << "\n";
-}
-
 void PrintCancelHeader(const std::string &symbol, std::uint64_t orderId)
 {
     std::cout << "\n";
     std::cout << BOLD MGT "  +--------------------------------------------------+\n" RST;
-    std::cout << BOLD MGT "  |              CANCEL ORDER                        |\n" RST;
+    std::cout << BOLD MGT "  |                   CANCEL ORDER                   |\n" RST;
     std::cout << BOLD MGT "  +--------------------------------------------------+\n" RST;
     std::cout << "  " DIM "Symbol   : " RST BOLD << symbol << RST "\n";
     std::cout << "  " DIM "Order ID : " RST BOLD << orderId << RST "\n";
@@ -338,13 +316,12 @@ int main()
             ClearScreen();
             PrintBanner();
 
-            bool orderAccepted = engine.SubmitOrder(symbol, side, type, priceTicks, quantity);
+            bool orderProcessed = engine.SubmitOrder(symbol, side, type, priceTicks, quantity);
 
-            if (orderAccepted)
+            if (orderProcessed)
             {
-                PrintOrderAccepted(symbol, side, type, quantity, priceTicks);
                 engine.PrintBook(symbol);
-                engine.PrintTradeHistory(symbol);
+                engine.PrintBookTradeHistory(symbol);
             }
 
             Pause();
@@ -371,7 +348,7 @@ int main()
             ClearScreen();
             PrintBanner();
 
-            engine.PrintTradeHistory(symbol);
+            engine.PrintBookTradeHistory(symbol);
 
             Pause();
             ClearScreen();
@@ -386,12 +363,12 @@ int main()
             PrintBanner();
             PrintCancelHeader(symbol, orderId);
 
-            bool cancelAccepted = engine.CancelOrder(symbol, orderId);
+            bool cancelProcessed = engine.CancelOrder(symbol, orderId);
 
-            if (cancelAccepted)
+            if (cancelProcessed)
             {
                 engine.PrintBook(symbol);
-                engine.PrintTradeHistory(symbol);
+                engine.PrintBookTradeHistory(symbol);
             }
 
             Pause();
@@ -411,11 +388,22 @@ int main()
         }
         else if (menuChoice == 6)
         {
+            ClearScreen();
+            PrintBanner();
+
+            engine.PrintExchangeTradeHistory();
+
+            Pause();
+            ClearScreen();
+            PrintBanner();
+        }
+        else if (menuChoice == 7)
+        {
             running = false;
         }
         else
         {
-            PrintError("Invalid option. Choose 1-6.");
+            PrintError("Invalid option. Choose 1-7.");
             Pause();
             ClearScreen();
             PrintBanner();

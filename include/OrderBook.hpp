@@ -6,10 +6,13 @@
 #include <unordered_map>
 #include <list>
 #include <string>
+#include <vector>
 
 #include "Order.hpp"
 #include "OrderLocation.hpp"
 #include "TradeHistory.hpp"
+#include "ExecutionReport.hpp"
+#include "OrderResult.hpp"
 
 class OrderBook
 {
@@ -23,22 +26,18 @@ class OrderBook
 
     std::unordered_map<std::uint64_t, OrderLocation> OrderLocations;
 
-    TradeHistory tradeHistory;
-
 public:
     OrderBook(const std::string &symbol);
 
-    void HandleMarketBuy(Order &NewOrder);
-    void HandleMarketSell(Order &NewOrder);
+    std::vector<ExecutionReport> HandleMarketBuy(Order &NewOrder);
+    std::vector<ExecutionReport> HandleMarketSell(Order &NewOrder);
 
-    void HandleLimitBuy(Order &NewOrder);
-    void HandleLimitSell(Order &NewOrder);
+    std::vector<ExecutionReport> HandleLimitBuy(Order &NewOrder);
+    std::vector<ExecutionReport> HandleLimitSell(Order &NewOrder);
 
-    void AddOrder(OrderSide side, OrderType type, std::uint64_t priceTicks, int quantity);
+    OrderResult AddOrder(OrderSide side, OrderType type, std::uint64_t priceTicks, int quantity);
 
     void CancelOrder(std::uint64_t id);
-
-    void PrintTradeHistory() const;
 
     void PrintOrderBook() const;
 };

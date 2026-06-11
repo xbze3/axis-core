@@ -1,10 +1,13 @@
 #include <iostream>
 #include <iomanip>
-#include <iostream>
+#include <cstdint>
 
 #include "ExchangeEngine.hpp"
 #include "SymbolRegistry.hpp"
 #include "OrderBook.hpp"
+#include "ExecutionReport.hpp"
+#include "OrderResult.hpp"
+#include "Utils.hpp"
 
 ExchangeEngine::ExchangeEngine()
 {
@@ -65,6 +68,8 @@ bool ExchangeEngine::RemoveBook(const std::string &symbol)
 
 bool ExchangeEngine::SubmitOrder(const std::string &symbol, OrderSide side, OrderType type, std::uint64_t priceTicks, int quantity)
 {
+    std::cout << "ORDER RECEIVED: Symbol " << symbol << " | Side " << (side == OrderSide::Buy ? "BUY" : "SELL") << " | Type " << (type == OrderType::Limit ? "LIMIT" : "MARKET") << " | Quantity " << quantity << " | Price " << (type == OrderType::Limit ? FormatPrice(priceTicks) : "MARKET") << std::endl;
+
     InstrumentId id(0);
 
     if (!registry.TryGetInstrumentId(symbol, id))
@@ -81,7 +86,34 @@ bool ExchangeEngine::SubmitOrder(const std::string &symbol, OrderSide side, Orde
         return false;
     }
 
-    book->second.AddOrder(side, type, priceTicks, quantity);
+    OrderResult result = book->second.AddOrder(side, type, priceTicks, quantity);
+
+    if (result.status == OrderStatus::Rejected)
+    {
+        std::cout << "ORDER REJECTED: Symbol " << symbol << " | " << result.message << std::endl;
+        return false;
+    }
+
+    if (result.status == OrderStatus::CancelledUnfilled)
+    {
+        std::cout << "ORDER CANCELLED: Symbol " << symbol << " | " << result.message << std::endl;
+        return true;
+    }
+
+    if (result.status == OrderStatus::AcceptedResting)
+    {
+        std::cout << "ORDER ACCEPTED: Symbol " << symbol << " | " << result.message << std::endl;
+        return true;
+    }
+
+    std::cout << "ORDER MATCHED: Symbol " << symbol << " | Trades executed: " << result.executions.size() << std::endl;
+
+    for (const ExecutionReport &report : result.executions)
+    {
+        exchangeTradeHistory.AddTrade(report.symbol, report.buyOrderId, report.sellOrderId, report.priceTicks, report.quantity, report.aggressorSide);
+    }
+
+    std::cout << "TRADE HISTORY UPDATED: Added " << result.executions.size() << " trade(s) to exchange-level history." << std::endl;
 
     return true;
 }
@@ -211,7 +243,7 @@ void ExchangeEngine::PrintBook(const std::string &symbol) const
     book->second.PrintOrderBook();
 }
 
-void ExchangeEngine::PrintTradeHistory(const std::string &symbol) const
+void ExchangeEngine::PrintBookTradeHistory(const std::string &symbol) const
 {
     const std::string RESET = "\033[0m";
     const std::string BOLD = "\033[1m";
@@ -242,14 +274,14 @@ void ExchangeEngine::PrintTradeHistory(const std::string &symbol) const
     }
 
     std::cout << BOLD << CYAN << "\n############################################################\n"
-              << "#                 EXCHANGE TRADE HISTORY                  #\n"
+              << "#                  SYMBOL TRADE HISTORY                   #\n"
               << "############################################################\n"
               << RESET;
 
     std::cout << "  Symbol: " << BOLD << normalizedSymbol << RESET
               << "  |  Instrument ID: " << BOLD << id.value << RESET << "\n";
 
-    book->second.PrintTradeHistory();
+    exchangeTradeHistory.PrintTradesForSymbol(normalizedSymbol);
 }
 
 void ExchangeEngine::PrintAllBooks() const
@@ -300,4 +332,9 @@ void ExchangeEngine::PrintAllBooks() const
 
     std::cout << BOLD << CYAN << "############################################################\n"
               << RESET << "\n";
+}
+
+void ExchangeEngine::PrintExchangeTradeHistory() const
+{
+    exchangeTradeHistory.PrintTradeHistory();
 }

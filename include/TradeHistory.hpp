@@ -15,5 +15,7 @@ public:
 
     void AddTrade(const std::string &symbol, std::uint64_t buyOrderId, std::uint64_t sellOrderId, std::uint64_t priceTicks, int quantity, AggressorSide aggressorSide);
 
+    void PrintTradesForSymbol(const std::string &symbol) const;
+
     void PrintTradeHistory() const;
 };

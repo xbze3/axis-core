@@ -1,9 +1,12 @@
 #include <iostream>
 #include <iterator>
+#include <vector>
 #include <string>
 
 #include "OrderBook.hpp"
 #include "Utils.hpp"
+#include "ExecutionReport.hpp"
+#include "Enums.hpp"
 
 OrderBook::OrderBook(const std::string &symbol) : symbol(symbol)
 {
@@ -11,9 +14,11 @@ OrderBook::OrderBook(const std::string &symbol) : symbol(symbol)
     nextOrderSequenceNumber = 1;
 }
 
-void OrderBook::HandleMarketBuy(Order &NewOrder)
+std::vector<ExecutionReport> OrderBook::HandleMarketBuy(Order &NewOrder)
 {
     int OriginalQuantity = NewOrder.quantity;
+
+    std::vector<ExecutionReport> executionReports;
 
     while (NewOrder.quantity > 0 && !SellOrders.empty())
     {
@@ -31,7 +36,8 @@ void OrderBook::HandleMarketBuy(Order &NewOrder)
             NewOrder.quantity -= TradeQuantity;
             BestSellOrder.quantity -= TradeQuantity;
 
-            tradeHistory.AddTrade(symbol, NewOrder.id, BestSellOrder.id, BestSellPrice, TradeQuantity, AggressorSide::Buy);
+            executionReports.push_back({symbol, NewOrder.id, BestSellOrder.id, BestSellPrice, TradeQuantity, AggressorSide::Buy});
+
             std::cout << "TRADE: Buy Order " << NewOrder.id << " matched with Sell Order " << BestSellOrder.id << " | Price: " << FormatPrice(BestSellPrice) << " | Quantity: " << TradeQuantity << " | Order Type: Market" << std::endl;
 
             if (BestSellOrder.quantity == 0)
@@ -58,11 +64,15 @@ void OrderBook::HandleMarketBuy(Order &NewOrder)
             std::cout << "MARKET BUY ORDER " << NewOrder.id << " partially filled. Unfilled quantity cancelled: " << NewOrder.quantity << std::endl;
         }
     }
+
+    return executionReports;
 }
 
-void OrderBook::HandleMarketSell(Order &NewOrder)
+std::vector<ExecutionReport> OrderBook::HandleMarketSell(Order &NewOrder)
 {
     int OriginalQuantity = NewOrder.quantity;
+
+    std::vector<ExecutionReport> executionReports;
 
     while (NewOrder.quantity > 0 && !BuyOrders.empty())
     {
@@ -80,7 +90,8 @@ void OrderBook::HandleMarketSell(Order &NewOrder)
             NewOrder.quantity -= TradeQuantity;
             BestBuyOrder.quantity -= TradeQuantity;
 
-            tradeHistory.AddTrade(symbol, BestBuyOrder.id, NewOrder.id, BestBuyPrice, TradeQuantity, AggressorSide::Sell);
+            executionReports.push_back({symbol, BestBuyOrder.id, NewOrder.id, BestBuyPrice, TradeQuantity, AggressorSide::Sell});
+
             std::cout << "TRADE: Sell Order " << NewOrder.id << " matched with Buy Order " << BestBuyOrder.id << " | Price: " << FormatPrice(BestBuyPrice) << " | Quantity: " << TradeQuantity << " | Order Type: Market" << std::endl;
 
             if (BestBuyOrder.quantity == 0)
@@ -107,10 +118,14 @@ void OrderBook::HandleMarketSell(Order &NewOrder)
             std::cout << "MARKET SELL ORDER " << NewOrder.id << " partially filled. Unfilled quantity cancelled: " << NewOrder.quantity << std::endl;
         }
     }
+
+    return executionReports;
 }
 
-void OrderBook::HandleLimitBuy(Order &NewOrder)
+std::vector<ExecutionReport> OrderBook::HandleLimitBuy(Order &NewOrder)
 {
+    std::vector<ExecutionReport> executionReports;
+
     while (NewOrder.quantity > 0 && !SellOrders.empty())
     {
         auto BestSell = SellOrders.begin();
@@ -132,7 +147,8 @@ void OrderBook::HandleLimitBuy(Order &NewOrder)
             NewOrder.quantity -= TradeQuantity;
             BestSellOrder.quantity -= TradeQuantity;
 
-            tradeHistory.AddTrade(symbol, NewOrder.id, BestSellOrder.id, BestSellPrice, TradeQuantity, AggressorSide::Buy);
+            executionReports.push_back({symbol, NewOrder.id, BestSellOrder.id, BestSellPrice, TradeQuantity, AggressorSide::Buy});
+
             std::cout << "TRADE: Buy Order " << NewOrder.id << " matched with Sell Order " << BestSellOrder.id << " | Price: " << FormatPrice(BestSellPrice) << " | Quantity: " << TradeQuantity << " | Order Type: Limit" << std::endl;
 
             if (BestSellOrder.quantity == 0)
@@ -159,10 +175,14 @@ void OrderBook::HandleLimitBuy(Order &NewOrder)
 
         OrderLocations.emplace(NewOrder.id, OrderLocation(NewOrder.side, NewOrder.priceTicks, NewOrderIterator));
     }
+
+    return executionReports;
 }
 
-void OrderBook::HandleLimitSell(Order &NewOrder)
+std::vector<ExecutionReport> OrderBook::HandleLimitSell(Order &NewOrder)
 {
+    std::vector<ExecutionReport> executionReports;
+
     while (NewOrder.quantity > 0 && !BuyOrders.empty())
     {
         auto BestBuy = BuyOrders.begin();
@@ -184,7 +204,8 @@ void OrderBook::HandleLimitSell(Order &NewOrder)
             NewOrder.quantity -= TradeQuantity;
             BestBuyOrder.quantity -= TradeQuantity;
 
-            tradeHistory.AddTrade(symbol, BestBuyOrder.id, NewOrder.id, BestBuyPrice, TradeQuantity, AggressorSide::Sell);
+            executionReports.push_back({symbol, BestBuyOrder.id, NewOrder.id, BestBuyPrice, TradeQuantity, AggressorSide::Sell});
+
             std::cout << "TRADE: Sell Order " << NewOrder.id << " matched with Buy Order " << BestBuyOrder.id << " | Price: " << FormatPrice(BestBuyPrice) << " | Quantity: " << TradeQuantity << " | Order Type: Limit" << std::endl;
 
             if (BestBuyOrder.quantity == 0)
@@ -211,20 +232,22 @@ void OrderBook::HandleLimitSell(Order &NewOrder)
 
         OrderLocations.emplace(NewOrder.id, OrderLocation(NewOrder.side, NewOrder.priceTicks, NewOrderIterator));
     }
+
+    return executionReports;
 }
 
-void OrderBook::AddOrder(OrderSide side, OrderType type, std::uint64_t priceTicks, int quantity)
+OrderResult OrderBook::AddOrder(OrderSide side, OrderType type, std::uint64_t priceTicks, int quantity)
 {
+    std::vector<ExecutionReport> executionReports;
+
     if (quantity <= 0)
     {
-        std::cout << "ERROR: Valid Order quantity is required" << std::endl;
-        return;
+        return {OrderStatus::Rejected, "Valid order quantity is required.", {}};
     }
 
     if (type == OrderType::Limit && priceTicks <= 0)
     {
-        std::cout << "ERROR: Valid Order price is required for a Limit Order" << std::endl;
-        return;
+        return {OrderStatus::Rejected, "Valid order price is required for a limit order.", {}};
     }
 
     Order NewOrder(nextOrderId, nextOrderSequenceNumber, side, type, priceTicks, quantity);
@@ -233,27 +256,44 @@ void OrderBook::AddOrder(OrderSide side, OrderType type, std::uint64_t priceTick
     {
         if (side == OrderSide::Buy)
         {
-            HandleMarketBuy(NewOrder);
+            executionReports = HandleMarketBuy(NewOrder);
         }
         else
         {
-            HandleMarketSell(NewOrder);
+            executionReports = HandleMarketSell(NewOrder);
         }
     }
     else
     {
         if (side == OrderSide::Buy)
         {
-            HandleLimitBuy(NewOrder);
+            executionReports = HandleLimitBuy(NewOrder);
         }
         else
         {
-            HandleLimitSell(NewOrder);
+            executionReports = HandleLimitSell(NewOrder);
         }
     }
 
     nextOrderId++;
     nextOrderSequenceNumber++;
+
+    if (executionReports.empty())
+    {
+        if (type == OrderType::Market)
+        {
+            return {OrderStatus::CancelledUnfilled, "Market order could not be filled.", {}};
+        }
+
+        return {OrderStatus::AcceptedResting, "Order accepted with no trades executed.", {}};
+    }
+
+    if (NewOrder.quantity == 0)
+    {
+        return {OrderStatus::Filled, "Order fully filled.", executionReports};
+    }
+
+    return {OrderStatus::PartiallyFilled, "Order partially filled.", executionReports};
 }
 
 void OrderBook::CancelOrder(std::uint64_t id)
@@ -465,9 +505,4 @@ void OrderBook::PrintOrderBook() const
 
     std::cout << BOLD << CYAN << "############################################################\n"
               << RESET << "\n";
-}
-
-void OrderBook::PrintTradeHistory() const
-{
-    tradeHistory.PrintTradeHistory();
 }

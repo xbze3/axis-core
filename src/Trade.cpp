@@ -1,6 +1,7 @@
 #include <iostream>
 #include <ctime>
 #include <iomanip>
+#include <string>
 
 #include "Trade.hpp"
 #include "Utils.hpp"
@@ -23,21 +24,18 @@ void Trade::PrintTrade() const
     const std::string aggressorLabel = (aggressorSide == AggressorSide::Buy) ? "BUY" : "SELL";
     const std::string &aggressorColor = (aggressorSide == AggressorSide::Buy) ? GREEN : RED;
 
-    std::cout << BOLD << CYAN << "  * TRADE #" << std::setw(5) << std::left << id << RESET << "  symbol: " << BOLD << MAGENTA << symbol << RESET << "  aggressor: " << BOLD << aggressorColor << aggressorLabel << RESET << "\n";
+    const int labelW = 14;
+    const int valueW = 18;
+    const int gapW = 4;
 
-    auto padded = [](const std::string &label, int width)
-    {
-        std::ostringstream oss;
-        oss << std::left << std::setw(width) << label;
-        return oss.str();
-    };
+    std::cout << BOLD << CYAN << "  * TRADE #" << std::left << std::setw(6) << id << RESET << " " << DIM << "Symbol" << RESET << ": " << BOLD << MAGENTA << std::left << std::setw(8) << symbol << RESET << "  " << DIM << "    Aggressor" << RESET << ": " << BOLD << aggressorColor << aggressorLabel << RESET << "\n";
 
-    std::cout << "    " << DIM << padded("Buy order", 16) << RESET << "#" << buyOrderId << "    " << DIM << padded("Sell order", 16) << RESET << "#" << sellOrderId << "\n";
+    std::cout << "    " << DIM << std::left << std::setw(labelW) << "Buy order" << RESET << std::left << std::setw(valueW) << ("#" + std::to_string(buyOrderId)) << std::setw(gapW) << "" << DIM << std::left << std::setw(labelW) << "Sell order" << RESET << "#" << sellOrderId << "\n";
 
-    std::cout << "    " << DIM << padded("Price", 16) << RESET << YELLOW << FormatPrice(priceTicks) << RESET << "    " << DIM << padded("Quantity", 16) << RESET << quantity << "\n";
+    std::cout << "    " << DIM << std::left << std::setw(labelW) << "Price" << RESET << YELLOW << std::left << std::setw(valueW) << FormatPrice(priceTicks) << RESET << std::setw(gapW) << "" << DIM << std::left << std::setw(labelW) << "Quantity" << RESET << quantity << "\n";
 
-    std::cout << "    " << DIM << padded("Timestamp", 16) << RESET << DIM << FormatTimestamp(timestamp) << RESET << "\n";
+    std::cout << "    " << DIM << std::left << std::setw(labelW) << "Timestamp" << RESET << DIM << FormatTimestamp(timestamp) << RESET << "\n";
 
-    std::cout << DIM << "    ---------------------------------------------\n"
+    std::cout << DIM << "    --------------------------------------------------------\n"
               << RESET;
 }

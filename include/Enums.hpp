@@ -17,3 +17,12 @@ enum class AggressorSide
     Buy,
     Sell
 };
+
+enum class OrderStatus
+{
+    Rejected,
+    AcceptedResting,
+    Filled,
+    PartiallyFilled,
+    CancelledUnfilled
+};

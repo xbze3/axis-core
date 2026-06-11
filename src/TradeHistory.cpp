@@ -18,6 +18,70 @@ void TradeHistory::AddTrade(const std::string &symbol, std::uint64_t buyOrderId,
     nextTradeId++;
 }
 
+void TradeHistory::PrintTradesForSymbol(const std::string &symbol) const
+{
+    const std::string RESET = "\033[0m";
+    const std::string BOLD = "\033[1m";
+    const std::string DIM = "\033[2m";
+    const std::string GREEN = "\033[32m";
+    const std::string RED = "\033[31m";
+    const std::string CYAN = "\033[36m";
+
+    int totalTrades = 0;
+    int totalQty = 0;
+    int buyAggCount = 0;
+    int sellAggCount = 0;
+
+    for (const Trade &t : trades)
+    {
+        if (t.symbol != symbol)
+        {
+            continue;
+        }
+
+        totalTrades++;
+        totalQty += t.quantity;
+
+        if (t.aggressorSide == AggressorSide::Buy)
+        {
+            buyAggCount++;
+        }
+        else
+        {
+            sellAggCount++;
+        }
+    }
+
+    if (totalTrades == 0)
+    {
+        std::cout << DIM << "\n  No trades executed yet for symbol " << symbol << ".\n\n"
+                  << RESET;
+        std::cout << CYAN << "############################################################\n"
+                  << RESET << "\n";
+        return;
+    }
+
+    std::cout << "\n"
+              << "  " << std::left << std::setw(28) << "Total trades executed:" << BOLD << totalTrades << RESET << "\n";
+    std::cout << "  " << std::left << std::setw(28) << "Total volume:" << BOLD << totalQty << RESET << "\n";
+    std::cout << "  " << std::left << std::setw(28) << "Buy-aggressed:" << BOLD << GREEN << buyAggCount << RESET << "\n";
+    std::cout << "  " << std::left << std::setw(28) << "Sell-aggressed:" << BOLD << RED << sellAggCount << RESET << "\n";
+
+    std::cout << DIM << "\n  --------------------------------------------------------\n"
+              << RESET;
+
+    for (const Trade &t : trades)
+    {
+        if (t.symbol == symbol)
+        {
+            t.PrintTrade();
+        }
+    }
+
+    std::cout << BOLD << CYAN << "############################################################\n"
+              << RESET << "\n";
+}
+
 void TradeHistory::PrintTradeHistory() const
 {
     const std::string RESET = "\033[0m";
