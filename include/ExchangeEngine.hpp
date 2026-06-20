@@ -24,6 +24,7 @@ public:
     bool RemoveBook(const std::string &symbol);
 
     bool SubmitOrder(const std::string &symbol, OrderSide side, OrderType type, std::uint64_t priceTicks, int quantity);
+    bool ModifyOrder(const std::string &symbol, std::uint64_t orderId, std::uint64_t newPriceTicks, int newQuantity);
     bool CancelOrder(const std::string &symbol, std::uint64_t orderId);
 
     bool HasBook(const std::string &symbol) const;

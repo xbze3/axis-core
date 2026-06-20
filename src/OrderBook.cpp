@@ -38,8 +38,6 @@ std::vector<ExecutionReport> OrderBook::HandleMarketBuy(Order &NewOrder)
 
             executionReports.push_back({symbol, NewOrder.id, BestSellOrder.id, BestSellPrice, TradeQuantity, AggressorSide::Buy});
 
-            std::cout << "TRADE: Buy Order " << NewOrder.id << " matched with Sell Order " << BestSellOrder.id << " | Price: " << FormatPrice(BestSellPrice) << " | Quantity: " << TradeQuantity << " | Order Type: Market" << std::endl;
-
             if (BestSellOrder.quantity == 0)
             {
                 OrderLocations.erase(BestSellOrder.id);
@@ -50,18 +48,6 @@ std::vector<ExecutionReport> OrderBook::HandleMarketBuy(Order &NewOrder)
         if (OrdersAtBestSellPrice.empty())
         {
             SellOrders.erase(BestSell);
-        }
-    }
-
-    if (NewOrder.quantity > 0)
-    {
-        if (NewOrder.quantity == OriginalQuantity)
-        {
-            std::cout << "MARKET BUY ORDER " << NewOrder.id << " could not be filled. Full quantity cancelled: " << NewOrder.quantity << std::endl;
-        }
-        else
-        {
-            std::cout << "MARKET BUY ORDER " << NewOrder.id << " partially filled. Unfilled quantity cancelled: " << NewOrder.quantity << std::endl;
         }
     }
 
@@ -92,8 +78,6 @@ std::vector<ExecutionReport> OrderBook::HandleMarketSell(Order &NewOrder)
 
             executionReports.push_back({symbol, BestBuyOrder.id, NewOrder.id, BestBuyPrice, TradeQuantity, AggressorSide::Sell});
 
-            std::cout << "TRADE: Sell Order " << NewOrder.id << " matched with Buy Order " << BestBuyOrder.id << " | Price: " << FormatPrice(BestBuyPrice) << " | Quantity: " << TradeQuantity << " | Order Type: Market" << std::endl;
-
             if (BestBuyOrder.quantity == 0)
             {
                 OrderLocations.erase(BestBuyOrder.id);
@@ -104,18 +88,6 @@ std::vector<ExecutionReport> OrderBook::HandleMarketSell(Order &NewOrder)
         if (OrdersAtBestBuyPrice.empty())
         {
             BuyOrders.erase(BestBuy);
-        }
-    }
-
-    if (NewOrder.quantity > 0)
-    {
-        if (NewOrder.quantity == OriginalQuantity)
-        {
-            std::cout << "MARKET SELL ORDER " << NewOrder.id << " could not be filled. Full quantity cancelled: " << NewOrder.quantity << std::endl;
-        }
-        else
-        {
-            std::cout << "MARKET SELL ORDER " << NewOrder.id << " partially filled. Unfilled quantity cancelled: " << NewOrder.quantity << std::endl;
         }
     }
 
@@ -148,8 +120,6 @@ std::vector<ExecutionReport> OrderBook::HandleLimitBuy(Order &NewOrder)
             BestSellOrder.quantity -= TradeQuantity;
 
             executionReports.push_back({symbol, NewOrder.id, BestSellOrder.id, BestSellPrice, TradeQuantity, AggressorSide::Buy});
-
-            std::cout << "TRADE: Buy Order " << NewOrder.id << " matched with Sell Order " << BestSellOrder.id << " | Price: " << FormatPrice(BestSellPrice) << " | Quantity: " << TradeQuantity << " | Order Type: Limit" << std::endl;
 
             if (BestSellOrder.quantity == 0)
             {
@@ -205,8 +175,6 @@ std::vector<ExecutionReport> OrderBook::HandleLimitSell(Order &NewOrder)
             BestBuyOrder.quantity -= TradeQuantity;
 
             executionReports.push_back({symbol, BestBuyOrder.id, NewOrder.id, BestBuyPrice, TradeQuantity, AggressorSide::Sell});
-
-            std::cout << "TRADE: Sell Order " << NewOrder.id << " matched with Buy Order " << BestBuyOrder.id << " | Price: " << FormatPrice(BestBuyPrice) << " | Quantity: " << TradeQuantity << " | Order Type: Limit" << std::endl;
 
             if (BestBuyOrder.quantity == 0)
             {
@@ -294,6 +262,26 @@ OrderResult OrderBook::AddOrder(OrderSide side, OrderType type, std::uint64_t pr
     }
 
     return {OrderStatus::PartiallyFilled, "Order partially filled.", executionReports};
+}
+
+void OrderBook::ModifyOrder(std::uint64_t id)
+{
+    auto Order = OrderLocations.find(id);
+
+    if (Order == OrderLocations.end())
+    {
+        std::cout << "MODIFY REJECTED: Order " << id << " was not found." << std::endl;
+        return;
+    }
+
+    OrderLocation &OrderData = Order->second;
+
+    if (OrderData.side == OrderSide::Buy)
+    {
+    }
+    else
+    {
+    }
 }
 
 void OrderBook::CancelOrder(std::uint64_t id)

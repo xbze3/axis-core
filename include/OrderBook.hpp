@@ -37,6 +37,8 @@ public:
 
     OrderResult AddOrder(OrderSide side, OrderType type, std::uint64_t priceTicks, int quantity);
 
+    void ModifyOrder(std::uint64_t id);
+
     void CancelOrder(std::uint64_t id);
 
     void PrintOrderBook() const;

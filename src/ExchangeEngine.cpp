@@ -106,7 +106,14 @@ bool ExchangeEngine::SubmitOrder(const std::string &symbol, OrderSide side, Orde
         return true;
     }
 
-    std::cout << "ORDER MATCHED: Symbol " << symbol << " | Trades executed: " << result.executions.size() << std::endl;
+    if (result.status == OrderStatus::Filled)
+    {
+        std::cout << "ORDER FILLED: Symbol " << symbol << " | Trades executed: " << result.executions.size() << std::endl;
+    }
+    else if (result.status == OrderStatus::PartiallyFilled)
+    {
+        std::cout << "ORDER PARTIALLY FILLED: Symbol " << symbol << " | Trades executed: " << result.executions.size() << std::endl;
+    }
 
     for (const ExecutionReport &report : result.executions)
     {
@@ -114,6 +121,29 @@ bool ExchangeEngine::SubmitOrder(const std::string &symbol, OrderSide side, Orde
     }
 
     std::cout << "TRADE HISTORY UPDATED: Added " << result.executions.size() << " trade(s) to exchange-level history." << std::endl;
+
+    return true;
+}
+
+bool ExchangeEngine::ModifyOrder(const std::string &symbol, std::uint64_t orderId, std::uint64_t newPriceTicks, int newQuantity)
+{
+    InstrumentId id(0);
+
+    if (!registry.TryGetInstrumentId(symbol, id))
+    {
+        std::cout << "MODIFY REJECTED: Symbol " << symbol << " is not registered." << std::endl;
+        return false;
+    }
+
+    auto book = OrderBooks.find(id);
+
+    if (book == OrderBooks.end())
+    {
+        std::cout << "MODIFY REJECTED: No order book found for symbol " << symbol << "." << std::endl;
+        return false;
+    }
+
+    book->second.ModifyOrder(orderId);
 
     return true;
 }
