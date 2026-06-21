@@ -143,7 +143,38 @@ bool ExchangeEngine::ModifyOrder(const std::string &symbol, std::uint64_t orderI
         return false;
     }
 
-    book->second.ModifyOrder(orderId);
+    OrderResult result = book->second.ModifyOrder(orderId, newPriceTicks, newQuantity);
+
+    if (result.status == OrderStatus::Rejected)
+    {
+        std::cout << "MODIFY REJECTED: " << result.message << std::endl;
+        return false;
+    }
+
+    if (result.status == OrderStatus::AcceptedResting)
+    {
+        std::cout << "MODIFY ACCEPTED: Symbol " << symbol << " | " << result.message << std::endl;
+        return true;
+    }
+
+    if (result.status == OrderStatus::Filled)
+    {
+        std::cout << "MODIFY FILLED: Symbol " << symbol << " | Trades executed: " << result.executions.size() << std::endl;
+    }
+    else if (result.status == OrderStatus::PartiallyFilled)
+    {
+        std::cout << "MODIFY PARTIALLY FILLED: Symbol " << symbol << " | Trades executed: " << result.executions.size() << std::endl;
+    }
+
+    for (const ExecutionReport &report : result.executions)
+    {
+        exchangeTradeHistory.AddTrade(report.symbol, report.buyOrderId, report.sellOrderId, report.priceTicks, report.quantity, report.aggressorSide);
+    }
+
+    if (!result.executions.empty())
+    {
+        std::cout << "TRADE HISTORY UPDATED: Added " << result.executions.size() << " trade(s) to exchange-level history." << std::endl;
+    }
 
     return true;
 }
