@@ -264,24 +264,117 @@ OrderResult OrderBook::AddOrder(OrderSide side, OrderType type, std::uint64_t pr
     return {OrderStatus::PartiallyFilled, "Order partially filled.", executionReports};
 }
 
-void OrderBook::ModifyOrder(std::uint64_t id)
+void OrderBook::ModifyOrder(std::uint64_t id, std::uint64_t newPriceTicks, int newQuantity)
 {
-    auto Order = OrderLocations.find(id);
+    if (newPriceTicks == 0)
+    {
+        std::cout << "MODIFY REJECTED: Valid update price is required." << std::endl;
+        return;
+    }
 
-    if (Order == OrderLocations.end())
+    if (newQuantity <= 0)
+    {
+        std::cout << "MODIFY REJECTED: Valid update quantity is required." << std::endl;
+        return;
+    }
+
+    auto OrderLocationEntry = OrderLocations.find(id);
+
+    if (OrderLocationEntry == OrderLocations.end())
     {
         std::cout << "MODIFY REJECTED: Order " << id << " was not found." << std::endl;
         return;
     }
 
-    OrderLocation &OrderData = Order->second;
+    OrderLocation &OrderData = OrderLocationEntry->second;
 
-    if (OrderData.side == OrderSide::Buy)
+    Order &OrderToModify = *(OrderData.orderIterator);
+
+    std::uint64_t oldPriceTicks = OrderToModify.priceTicks;
+    OrderSide side = OrderToModify.side;
+
+    if (oldPriceTicks == newPriceTicks && OrderToModify.quantity == newQuantity)
     {
+        std::cout << "MODIFY: No change made." << std::endl;
+        return;
+    }
+
+    if (oldPriceTicks == newPriceTicks && OrderToModify.quantity > newQuantity)
+    {
+        OrderToModify.quantity = newQuantity;
+
+        std::cout << "MODIFY ACCEPTED: Order " << id << " quantity reduced." << std::endl;
+        return;
+    }
+
+    if (side == OrderSide::Buy)
+    {
+        auto LevelEntry = BuyOrders.find(oldPriceTicks);
+
+        if (LevelEntry == BuyOrders.end())
+        {
+            std::cout << "MODIFY REJECTED: Price level was not found." << std::endl;
+            return;
+        }
+
+        std::list<Order> &OrdersAtOldPrice = LevelEntry->second;
+
+        Order UpdatedOrder = OrderToModify;
+
+        OrdersAtOldPrice.erase(OrderData.orderIterator);
+
+        if (OrdersAtOldPrice.empty())
+        {
+            BuyOrders.erase(LevelEntry);
+        }
+
+        UpdatedOrder.priceTicks = newPriceTicks;
+        UpdatedOrder.quantity = newQuantity;
+        UpdatedOrder.sequenceNumber = nextOrderSequenceNumber;
+        nextOrderSequenceNumber++;
+
+        std::list<Order> &OrdersAtNewPrice = BuyOrders[newPriceTicks];
+
+        OrdersAtNewPrice.push_back(UpdatedOrder);
+
+        OrderData.priceTicks = newPriceTicks;
+        OrderData.orderIterator = std::prev(OrdersAtNewPrice.end());
     }
     else
     {
+        auto LevelEntry = SellOrders.find(oldPriceTicks);
+
+        if (LevelEntry == SellOrders.end())
+        {
+            std::cout << "MODIFY REJECTED: Price level was not found." << std::endl;
+            return;
+        }
+
+        std::list<Order> &OrdersAtOldPrice = LevelEntry->second;
+
+        Order UpdatedOrder = OrderToModify;
+
+        OrdersAtOldPrice.erase(OrderData.orderIterator);
+
+        if (OrdersAtOldPrice.empty())
+        {
+            SellOrders.erase(LevelEntry);
+        }
+
+        UpdatedOrder.priceTicks = newPriceTicks;
+        UpdatedOrder.quantity = newQuantity;
+        UpdatedOrder.sequenceNumber = nextOrderSequenceNumber;
+        nextOrderSequenceNumber++;
+
+        std::list<Order> &OrdersAtNewPrice = SellOrders[newPriceTicks];
+
+        OrdersAtNewPrice.push_back(UpdatedOrder);
+
+        OrderData.priceTicks = newPriceTicks;
+        OrderData.orderIterator = std::prev(OrdersAtNewPrice.end());
     }
+
+    std::cout << "MODIFY ACCEPTED: Order " << id << " updated." << std::endl;
 }
 
 void OrderBook::CancelOrder(std::uint64_t id)
