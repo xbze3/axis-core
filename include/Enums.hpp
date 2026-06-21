@@ -26,3 +26,9 @@ enum class OrderStatus
     PartiallyFilled,
     CancelledUnfilled
 };
+
+enum class CancelStatus
+{
+    Rejected,
+    Cancelled
+};

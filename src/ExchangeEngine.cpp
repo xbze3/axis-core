@@ -7,6 +7,7 @@
 #include "OrderBook.hpp"
 #include "ExecutionReport.hpp"
 #include "OrderResult.hpp"
+#include "CancelOrderResult.hpp"
 #include "Utils.hpp"
 
 ExchangeEngine::ExchangeEngine()
@@ -197,7 +198,15 @@ bool ExchangeEngine::CancelOrder(const std::string &symbol, std::uint64_t orderI
         return false;
     }
 
-    book->second.CancelOrder(orderId);
+    CancelOrderResult result = book->second.CancelOrder(orderId);
+
+    if (result.status == CancelStatus::Rejected)
+    {
+        std::cout << "CANCEL REJECTED: " << result.message << std::endl;
+        return false;
+    }
+
+    std::cout << "CANCELLED: Symbol " << symbol << " | Order #" << orderId << " | " << result.message << std::endl;
 
     return true;
 }

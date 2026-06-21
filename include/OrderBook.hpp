@@ -13,6 +13,7 @@
 #include "TradeHistory.hpp"
 #include "ExecutionReport.hpp"
 #include "OrderResult.hpp"
+#include "CancelOrderResult.hpp"
 
 class OrderBook
 {
@@ -36,10 +37,9 @@ public:
     std::vector<ExecutionReport> HandleLimitSell(Order &NewOrder);
 
     OrderResult AddOrder(OrderSide side, OrderType type, std::uint64_t priceTicks, int quantity);
+    OrderResult ModifyOrder(std::uint64_t id, std::uint64_t newPriceTicks, int newQuantity);
 
-    void ModifyOrder(std::uint64_t id);
-
-    void CancelOrder(std::uint64_t id);
+    CancelOrderResult CancelOrder(std::uint64_t id);
 
     void PrintOrderBook() const;
 };

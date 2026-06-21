@@ -95,7 +95,77 @@ int main()
     engine.PrintBookTradeHistory("BTI");
     engine.PrintExchangeTradeHistory();
 
-    std::cout << "\n========== TEST 11: MULTIPLE BOOKS ==========\n";
+    std::cout << "\n========== TEST 11: MODIFY ORDERS ==========\n";
+
+    engine.AddBook("MOD");
+
+    engine.SubmitOrder("MOD", OrderSide::Buy, OrderType::Limit, 10000, 10);
+    engine.SubmitOrder("MOD", OrderSide::Buy, OrderType::Limit, 10000, 5);
+    engine.SubmitOrder("MOD", OrderSide::Sell, OrderType::Limit, 10100, 7);
+
+    engine.PrintBook("MOD");
+    engine.PrintBookTradeHistory("MOD");
+    engine.PrintExchangeTradeHistory();
+
+    std::cout << "\n========== TEST 11A: MODIFY BUY REDUCE QUANTITY ==========\n";
+
+    engine.ModifyOrder("MOD", 1, 10000, 6);
+
+    engine.PrintBook("MOD");
+    engine.PrintBookTradeHistory("MOD");
+    engine.PrintExchangeTradeHistory();
+
+    std::cout << "\n========== TEST 11B: MODIFY BUY INCREASE QUANTITY SAME PRICE ==========\n";
+
+    engine.ModifyOrder("MOD", 1, 10000, 12);
+
+    engine.PrintBook("MOD");
+    engine.PrintBookTradeHistory("MOD");
+    engine.PrintExchangeTradeHistory();
+
+    std::cout << "\n========== TEST 11C: MODIFY BUY PRICE WITHOUT MATCH ==========\n";
+
+    engine.ModifyOrder("MOD", 1, 9950, 12);
+
+    engine.PrintBook("MOD");
+    engine.PrintBookTradeHistory("MOD");
+    engine.PrintExchangeTradeHistory();
+
+    std::cout << "\n========== TEST 11D: MODIFY BUY PRICE WITH MATCH ==========\n";
+
+    engine.ModifyOrder("MOD", 1, 10100, 12);
+
+    engine.PrintBook("MOD");
+    engine.PrintBookTradeHistory("MOD");
+    engine.PrintExchangeTradeHistory();
+
+    std::cout << "\n========== TEST 11E: MODIFY SELL PRICE WITH MATCH ==========\n";
+
+    engine.AddBook("MODSELL");
+
+    engine.SubmitOrder("MODSELL", OrderSide::Buy, OrderType::Limit, 9800, 8);
+    engine.SubmitOrder("MODSELL", OrderSide::Sell, OrderType::Limit, 9900, 6);
+
+    engine.PrintBook("MODSELL");
+
+    engine.ModifyOrder("MODSELL", 2, 9800, 6);
+
+    engine.PrintBook("MODSELL");
+    engine.PrintBookTradeHistory("MODSELL");
+    engine.PrintExchangeTradeHistory();
+
+    std::cout << "\n========== TEST 11F: MODIFY INVALID ORDERS ==========\n";
+
+    engine.ModifyOrder("MOD", 999, 10000, 5);
+    engine.ModifyOrder("MOD", 1, 0, 5);
+    engine.ModifyOrder("MOD", 1, 10000, 0);
+    engine.ModifyOrder("UNKNOWN", 1, 10000, 5);
+
+    engine.PrintBook("MOD");
+    engine.PrintBookTradeHistory("MOD");
+    engine.PrintExchangeTradeHistory();
+
+    std::cout << "\n========== TEST 12: MULTIPLE BOOKS ==========\n";
 
     engine.AddBook("DTC");
 
@@ -106,27 +176,28 @@ int main()
     engine.PrintBook("DTC");
     engine.PrintBookTradeHistory("DTC");
 
-    std::cout << "\n========== TEST 12: PRINT ALL BOOKS ==========\n";
+    std::cout << "\n========== TEST 13: PRINT ALL BOOKS ==========\n";
 
     engine.PrintAllBooks();
 
-    std::cout << "\n========== TEST 13: PRINT EXCHANGE TRADE HISTORY ==========\n";
+    std::cout << "\n========== TEST 14: PRINT EXCHANGE TRADE HISTORY ==========\n";
 
     engine.PrintExchangeTradeHistory();
 
-    std::cout << "\n========== TEST 14: UNKNOWN SYMBOL ==========\n";
+    std::cout << "\n========== TEST 15: UNKNOWN SYMBOL ==========\n";
 
     engine.SubmitOrder("UNKNOWN", OrderSide::Buy, OrderType::Limit, 10000, 5);
     engine.CancelOrder("UNKNOWN", 1);
+    engine.ModifyOrder("UNKNOWN", 1, 10000, 5);
     engine.PrintBook("UNKNOWN");
     engine.PrintBookTradeHistory("UNKNOWN");
 
-    std::cout << "\n========== TEST 15: REMOVE BOOK ==========\n";
+    std::cout << "\n========== TEST 16: REMOVE BOOK ==========\n";
 
     engine.RemoveBook("DTC");
     engine.PrintAllBooks();
 
-    std::cout << "\n========== TEST 16: FINAL EXCHANGE TRADE HISTORY ==========\n";
+    std::cout << "\n========== TEST 17: FINAL EXCHANGE TRADE HISTORY ==========\n";
 
     engine.PrintExchangeTradeHistory();
 

@@ -176,9 +176,10 @@ void PrintMenu()
     std::cout << BOLD "  |  " CYN "2" RST BOLD "  View Order Book                              |\n" RST;
     std::cout << BOLD "  |  " YLW "3" RST BOLD "  View Book Trade History                      |\n" RST;
     std::cout << BOLD "  |  " MGT "4" RST BOLD "  Cancel Order                                 |\n" RST;
-    std::cout << BOLD "  |  " CYN "5" RST BOLD "  View All Books                               |\n" RST;
-    std::cout << BOLD "  |  " YLW "6" RST BOLD "  View Exchange Trade History                  |\n" RST;
-    std::cout << BOLD "  |  " RED "7" RST BOLD "  Exit                                         |\n" RST;
+    std::cout << BOLD "  |  " GRN "5" RST BOLD "  Modify Order                                 |\n" RST;
+    std::cout << BOLD "  |  " CYN "6" RST BOLD "  View All Books                               |\n" RST;
+    std::cout << BOLD "  |  " YLW "7" RST BOLD "  View Exchange Trade History                  |\n" RST;
+    std::cout << BOLD "  |  " RED "8" RST BOLD "  Exit                                         |\n" RST;
     std::cout << BOLD "  +--------------------------------------------------+\n" RST;
     std::cout << "\n";
 }
@@ -203,6 +204,20 @@ void PrintCancelHeader(const std::string &symbol, std::uint64_t orderId)
     std::cout << "  " DIM "Symbol   : " RST BOLD << symbol << RST "\n";
     std::cout << "  " DIM "Order ID : " RST BOLD << orderId << RST "\n";
     std::cout << BOLD MGT "  +--------------------------------------------------+\n" RST;
+    std::cout << "\n";
+}
+
+void PrintModifyHeader(const std::string &symbol, std::uint64_t orderId, std::uint64_t newPriceTicks, int newQuantity)
+{
+    std::cout << "\n";
+    std::cout << BOLD GRN "  +--------------------------------------------------+\n" RST;
+    std::cout << BOLD GRN "  |                   MODIFY ORDER                   |\n" RST;
+    std::cout << BOLD GRN "  +--------------------------------------------------+\n" RST;
+    std::cout << "  " DIM "Symbol       : " RST BOLD << symbol << RST "\n";
+    std::cout << "  " DIM "Order ID     : " RST BOLD << orderId << RST "\n";
+    std::cout << "  " DIM "New Price    : " RST BOLD << FormatPrice(newPriceTicks) << RST "\n";
+    std::cout << "  " DIM "New Quantity : " RST BOLD << newQuantity << RST "\n";
+    std::cout << BOLD GRN "  +--------------------------------------------------+\n" RST;
     std::cout << "\n";
 }
 
@@ -238,179 +253,176 @@ int main()
 
         int menuChoice = ReadInt(BOLD "  > " RST);
 
-        if (menuChoice == 1)
+        switch (menuChoice)
         {
-            std::string symbol = ReadSymbol();
-
-            int quantity;
-            std::uint64_t priceTicks = 0;
-
+        case 1:
+        {
             PrintSectionHeader("PLACE ORDER");
 
-            std::cout << "  " GRN "1" RST "  Buy\n";
-            std::cout << "  " RED "2" RST "  Sell\n\n";
+            std::string symbol = ReadSymbol();
+
+            std::cout << BOLD "\n  Side\n" RST;
+            std::cout << "  1. Buy\n";
+            std::cout << "  2. Sell\n";
 
             int sideChoice = ReadInt(BOLD "  Side > " RST);
-            OrderSide side;
 
-            if (sideChoice == 1)
+            if (sideChoice != 1 && sideChoice != 2)
             {
-                side = OrderSide::Buy;
-            }
-            else if (sideChoice == 2)
-            {
-                side = OrderSide::Sell;
-            }
-            else
-            {
-                PrintError("Invalid side.");
+                PrintError("Invalid side selected.");
                 Pause();
-                ClearScreen();
-                PrintBanner();
-                continue;
+                break;
             }
 
-            std::cout << "\n";
-            std::cout << "  " YLW "1" RST "  Limit\n";
-            std::cout << "  " MGT "2" RST "  Market\n\n";
+            OrderSide side = (sideChoice == 1) ? OrderSide::Buy : OrderSide::Sell;
+
+            std::cout << BOLD "\n  Type\n" RST;
+            std::cout << "  1. Limit\n";
+            std::cout << "  2. Market\n";
 
             int typeChoice = ReadInt(BOLD "  Type > " RST);
-            OrderType type;
 
-            if (typeChoice == 1)
+            if (typeChoice != 1 && typeChoice != 2)
             {
-                type = OrderType::Limit;
-            }
-            else if (typeChoice == 2)
-            {
-                type = OrderType::Market;
-            }
-            else
-            {
-                PrintError("Invalid type.");
+                PrintError("Invalid order type selected.");
                 Pause();
-                ClearScreen();
-                PrintBanner();
-                continue;
+                break;
             }
 
-            quantity = ReadInt(BOLD "\n  Quantity > " RST);
+            OrderType type = (typeChoice == 1) ? OrderType::Limit : OrderType::Market;
+            std::uint64_t priceTicks = 0;
 
             if (type == OrderType::Limit)
             {
                 std::string priceInput;
-
-                std::cout << BOLD "  Price    > " RST;
+                std::cout << BOLD "\n  Price > " RST;
                 std::cin >> priceInput;
 
                 if (!TryParsePriceToTicks(priceInput, priceTicks))
                 {
-                    PrintError("Invalid price. Use format: 12.50");
+                    PrintError("Invalid price format.");
                     Pause();
-                    ClearScreen();
-                    PrintBanner();
-                    continue;
+                    break;
                 }
             }
 
-            ClearScreen();
-            PrintBanner();
+            int quantity = ReadInt(BOLD "  Quantity > " RST);
 
-            bool orderProcessed = engine.SubmitOrder(symbol, side, type, priceTicks, quantity);
-
-            if (orderProcessed)
-            {
-                engine.PrintBook(symbol);
-                engine.PrintBookTradeHistory(symbol);
-            }
+            engine.SubmitOrder(symbol, side, type, priceTicks, quantity);
+            engine.PrintBook(symbol);
+            engine.PrintBookTradeHistory(symbol);
 
             Pause();
-            ClearScreen();
-            PrintBanner();
+            break;
         }
-        else if (menuChoice == 2)
+        case 2:
         {
-            std::string symbol = ReadSymbol();
+            PrintSectionHeader("VIEW ORDER BOOK");
 
-            ClearScreen();
-            PrintBanner();
+            std::string symbol = ReadSymbol();
 
             engine.PrintBook(symbol);
 
             Pause();
-            ClearScreen();
-            PrintBanner();
+            break;
         }
-        else if (menuChoice == 3)
+        case 3:
         {
-            std::string symbol = ReadSymbol();
+            PrintSectionHeader("VIEW BOOK TRADE HISTORY");
 
-            ClearScreen();
-            PrintBanner();
+            std::string symbol = ReadSymbol();
 
             engine.PrintBookTradeHistory(symbol);
 
             Pause();
-            ClearScreen();
-            PrintBanner();
+            break;
         }
-        else if (menuChoice == 4)
+        case 4:
         {
-            std::string symbol = ReadSymbol();
-            std::uint64_t orderId = ReadUInt64(BOLD "\n  Order ID > " RST);
+            PrintSectionHeader("CANCEL ORDER");
 
-            ClearScreen();
-            PrintBanner();
+            std::string symbol = ReadSymbol();
+            std::uint64_t orderId = ReadUInt64(BOLD "  Order ID > " RST);
+
             PrintCancelHeader(symbol, orderId);
 
-            bool cancelProcessed = engine.CancelOrder(symbol, orderId);
-
-            if (cancelProcessed)
-            {
-                engine.PrintBook(symbol);
-                engine.PrintBookTradeHistory(symbol);
-            }
+            engine.CancelOrder(symbol, orderId);
+            engine.PrintBook(symbol);
+            engine.PrintBookTradeHistory(symbol);
 
             Pause();
-            ClearScreen();
-            PrintBanner();
+            break;
         }
-        else if (menuChoice == 5)
+        case 5:
         {
-            ClearScreen();
-            PrintBanner();
+            PrintSectionHeader("MODIFY ORDER");
+
+            std::string symbol = ReadSymbol();
+            std::uint64_t orderId = ReadUInt64(BOLD "  Order ID > " RST);
+
+            std::string priceInput;
+            std::uint64_t newPriceTicks = 0;
+
+            std::cout << BOLD "  New Price > " RST;
+            std::cin >> priceInput;
+
+            if (!TryParsePriceToTicks(priceInput, newPriceTicks))
+            {
+                PrintError("Invalid price format.");
+                Pause();
+                break;
+            }
+
+            int newQuantity = ReadInt(BOLD "  New Quantity > " RST);
+
+            PrintModifyHeader(symbol, orderId, newPriceTicks, newQuantity);
+
+            engine.ModifyOrder(symbol, orderId, newPriceTicks, newQuantity);
+            engine.PrintBook(symbol);
+            engine.PrintBookTradeHistory(symbol);
+
+            Pause();
+            break;
+        }
+        case 6:
+        {
+            PrintSectionHeader("VIEW ALL BOOKS");
 
             engine.PrintAllBooks();
 
             Pause();
-            ClearScreen();
-            PrintBanner();
+            break;
         }
-        else if (menuChoice == 6)
+        case 7:
         {
-            ClearScreen();
-            PrintBanner();
+            PrintSectionHeader("VIEW EXCHANGE TRADE HISTORY");
 
             engine.PrintExchangeTradeHistory();
 
             Pause();
-            ClearScreen();
-            PrintBanner();
+            break;
         }
-        else if (menuChoice == 7)
+        case 8:
         {
             running = false;
+            break;
         }
-        else
+        default:
         {
-            PrintError("Invalid option. Choose 1-7.");
+            PrintError("Invalid menu option.");
             Pause();
+            break;
+        }
+        }
+
+        if (running)
+        {
             ClearScreen();
             PrintBanner();
         }
     }
 
-    std::cout << "\n" BOLD CYN "  Goodbye.\n\n" RST;
+    std::cout << "\n" BOLD CYN "  Goodbye.\n" RST;
 
     return 0;
 }

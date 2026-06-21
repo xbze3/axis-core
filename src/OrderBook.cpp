@@ -476,62 +476,57 @@ OrderResult OrderBook::ModifyOrder(std::uint64_t id, std::uint64_t newPriceTicks
     return {OrderStatus::PartiallyFilled, "Modified order partially filled.", executionReports};
 }
 
-void OrderBook::CancelOrder(std::uint64_t id)
+CancelOrderResult OrderBook::CancelOrder(std::uint64_t id)
 {
-    auto Order = OrderLocations.find(id);
+    auto OrderLocationEntry = OrderLocations.find(id);
 
-    if (Order == OrderLocations.end())
+    if (OrderLocationEntry == OrderLocations.end())
     {
-        std::cout << "CANCEL REJECTED: Order " << id << " was not found." << std::endl;
-        return;
+        return {CancelStatus::Rejected, "Order was not found."};
     }
 
-    OrderLocation &OrderData = Order->second;
+    OrderLocation &OrderData = OrderLocationEntry->second;
 
     if (OrderData.side == OrderSide::Buy)
     {
         auto OrderLevel = BuyOrders.find(OrderData.priceTicks);
 
-        if (OrderLevel != BuyOrders.end())
+        if (OrderLevel == BuyOrders.end())
         {
-            OrderLevel->second.erase(OrderData.orderIterator);
-
-            std::cout << "CANCELLED: Buy Order " << id << " | Price: " << FormatPrice(OrderData.priceTicks) << std::endl;
-
-            if (OrderLevel->second.empty())
-            {
-                BuyOrders.erase(OrderLevel);
-                std::cout << "PRICE LEVEL REMOVED: Buy level " << FormatPrice(OrderData.priceTicks) << " is now empty." << std::endl;
-            }
+            OrderLocations.erase(id);
+            return {CancelStatus::Rejected, "Buy price level was missing. Stale order location was cleaned up."};
         }
-        else
+
+        OrderLevel->second.erase(OrderData.orderIterator);
+
+        if (OrderLevel->second.empty())
         {
-            std::cout << "WARNING: Buy Order " << id << " was found in OrderLocations, but price level " << FormatPrice(OrderData.priceTicks) << " was missing. Cleaning up stale order location." << std::endl;
+            BuyOrders.erase(OrderLevel);
         }
+
+        OrderLocations.erase(id);
+
+        return {CancelStatus::Cancelled, "Buy order cancelled."};
     }
-    else
+
+    auto OrderLevel = SellOrders.find(OrderData.priceTicks);
+
+    if (OrderLevel == SellOrders.end())
     {
-        auto OrderLevel = SellOrders.find(OrderData.priceTicks);
+        OrderLocations.erase(id);
+        return {CancelStatus::Rejected, "Sell price level was missing. Stale order location was cleaned up."};
+    }
 
-        if (OrderLevel != SellOrders.end())
-        {
-            OrderLevel->second.erase(OrderData.orderIterator);
+    OrderLevel->second.erase(OrderData.orderIterator);
 
-            std::cout << "CANCELLED: Sell Order " << id << " | Price: " << FormatPrice(OrderData.priceTicks) << std::endl;
-
-            if (OrderLevel->second.empty())
-            {
-                SellOrders.erase(OrderLevel);
-                std::cout << "PRICE LEVEL REMOVED: Sell level " << FormatPrice(OrderData.priceTicks) << " is now empty." << std::endl;
-            }
-        }
-        else
-        {
-            std::cout << "WARNING: Sell Order " << id << " was found in OrderLocations, but price level " << FormatPrice(OrderData.priceTicks) << " was missing. Cleaning up stale order location." << std::endl;
-        }
+    if (OrderLevel->second.empty())
+    {
+        SellOrders.erase(OrderLevel);
     }
 
     OrderLocations.erase(id);
+
+    return {CancelStatus::Cancelled, "Sell order cancelled."};
 }
 
 void OrderBook::PrintOrderBook() const
